@@ -1,36 +1,123 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# PromptBuilder
 
-## Getting Started
+Build structured prompts in seconds. No blank page. No guessing.
 
-First, run the development server:
+A stateless frontend tool that converts natural language tasks into structured, role-enforced prompts — then lets you run them live against Gemini, GPT, or Claude using your own API key.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## The Problem It Solves
+
+Most people prompt AI in one unstructured shot:
+
+> "Please optimize my resume for this job description."
+
+This works, but it's inefficient. The model has to infer your intent, guess the output format, and process everything in one bloated context window.
+
+**Tested result:** A single-shot resume rewrite against a job description consumed **41,000 tokens**.
+
+The same task broken into three focused, structured prompts consumed **18,000 tokens** — a **56% reduction** — while producing more precise, actionable output.
+
+This tool is built around that insight.
+
+---
+
+## How It Works
+
+**Step 1 — Select a workflow**
+
+Pick from five task categories: Summarize, Extract Data, Classify, Draft, or Analyze.
+
+**Step 2 — Fill the form**
+
+Each workflow surfaces only the fields relevant to that task. No freeform guessing. Drop a PDF and it auto-converts to Markdown before injection.
+
+**Step 3 — Get your structured prompt**
+
+The tool compiles your inputs into a structured prompt with a defined system role, objective, and output constraints. See the token count before you send anything.
+
+**Step 4 — Run it (optional)**
+
+Switch to Live Sandbox, add your API key, and execute directly against Gemini, GPT-4o Mini, or Claude. Real token usage pulled from the API response — not estimated.
+
+---
+
+## Key Features
+
+- **5 workflow templates** — Summarize, Extract Data, Classify, Draft, Analyze
+- **PDF to Markdown parser** — client-side via pdfjs-dist, reduces token overhead before prompt injection
+- **Live token counter** — tracks raw content size vs compiled prompt size in real time
+- **Live Sandbox** — runs prompts against Gemini 2.0 Flash, GPT-4o Mini, or Claude Haiku using your own API key
+- **Multi-model comparison** — run the same prompt across all three models simultaneously and compare output and token cost
+- **Telemetry matrix** — exact input/output token counts from official API response headers
+- **Prompt history** — last 10 generated prompts cached in localStorage
+- **Export** — download any generated prompt as a `.txt` file
+- **$0 running cost** — completely stateless, no database, no stored keys
+
+---
+
+## Architecture
+
+Direct API calls from the browser are blocked by CORS restrictions on all three providers. Instead of asking users to expose their keys to a third-party backend, this tool uses a minimal Next.js serverless route as a passthrough proxy:
+
+```
+Client (React)  →  Next.js API Route  →  LLM Provider
+                ←  (Stateless Proxy)  ←
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The API key lives in React state only — never written to localStorage, never logged server-side, gone when the tab closes.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Tech Stack
 
-## Learn More
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js, React |
+| Styling | Tailwind CSS |
+| Token Counting | gpt-tokenizer (client-side) |
+| PDF Parsing | pdfjs-dist (client-side) |
+| API Proxy | Next.js Serverless Route |
+| Providers | Gemini 2.0 Flash, GPT-4o Mini, Claude Haiku |
+| Deployment | Vercel |
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Workflow Example — Resume vs Job Description
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This is the use case that produced the 56% token reduction figure.
 
-## Deploy on Vercel
+**Naive approach (41K tokens):**
+> Paste resume + job description → "Rewrite my resume for this role"
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Structured approach (18K tokens):**
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **Extract Data** — paste the job description, extract core technical skills, required databases, architectural patterns as a Markdown table
+2. **Analyze** — paste your resume + the keyword table, run a Gap Analysis to find missing alignment
+3. **Draft** — rewrite only the experience bullets that need updating, using Action-Context-Result framework with hard metrics
+
+Same end result. 56% fewer tokens. More precise output because each step has a single, clear job.
+
+---
+
+## Security
+
+- API keys are stored in React component state only
+- Keys are never written to localStorage, sessionStorage, or any database
+- The serverless proxy does not log request payloads or keys
+- Keys are cleared automatically when the session ends
+
+---
+
+## Running Locally
+
+```bash
+git clone https://github.com/your-username/prompt-template-builder
+cd prompt-template-builder
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+No `.env` setup required for core functionality. API keys are entered at runtime by the user.
