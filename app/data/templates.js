@@ -1,0 +1,330 @@
+export const templates = {
+  summarize: {
+    id: "summarize",
+    shortName: "Summarize",
+    label: "Executive Summary Engine",
+    description: "Converts lengthy documentation or resumes into clear, metric-driven analysis blocks.",
+    fields: [
+      {
+        id: "content",
+        label: "Source Material (Text or PDF Content)",
+        type: "textarea",
+        placeholder: "Paste text or drop your parsed PDF file here...",
+        required: true
+      },
+      {
+        id: "format",
+        label: "Summary Style",
+        type: "select",
+        options: [
+          { 
+            label: "Prioritized Bullet Points", 
+            value: "Prioritized Bullet Points", 
+            hint: "Action-oriented, impact-focused" 
+          },
+          { 
+            label: "Executive Abstract", 
+            value: "Executive Abstract", 
+            hint: "A concise, 3-sentence high-level overview" 
+          },
+          { 
+            label: "Technical Breakdown", 
+            value: "Technical Breakdown", 
+            hint: "Categorized by sub-systems and metrics" 
+          }
+        ],
+        required: true
+      },
+      {
+        id: "audience",
+        label: "Who is reading this?",
+        type: "select",
+        options: [
+          { 
+            label: "Non-Technical Stakeholders", 
+            value: "Non-Technical Stakeholders", 
+            hint: "Clear business value, zero jargon" 
+          },
+          { 
+            label: "C-Suite Executives", 
+            value: "C-Suite Executives", 
+            hint: "Bottom-line impact, risks, high-level KPIs" 
+          },
+          { 
+            label: "Engineering Team", 
+            value: "Engineering Team", 
+            hint: "Deep implementation details, edge cases, system facts" 
+          }
+        ],
+        required: true
+      }
+    ],
+    prompt_template: `[System Role]
+Act as an elite corporate communications strategist specializing in structural information architecture.
+
+[Objective]
+Condense the source material provided below. Deliver high-signal information tailored specifically for a {audience} audience.
+
+[Output Structure Constraints]
+1. Format your response strictly as a {format}.
+2. Bypass all conversational filler. Go straight to the data.
+3. Keep sentences concise, punchy, and heavily prioritized by significance.
+
+[Source Material]
+{content}
+
+[Strategic Briefing Output]:`
+  },
+
+  extract_data: {
+    id: "extract_data",
+    shortName: "Extract Data",
+    label: "Semantic Data Parser",
+    description: "Strips conversational fluff and maps unstructured data directly into clean structural schemas.",
+    fields: [
+      {
+        id: "content",
+        label: "Source Material",
+        type: "textarea",
+        placeholder: "Paste raw logs, conversation transcripts, invoices, or strings...",
+        required: true
+      },
+      {
+        id: "fields",
+        label: "What specific data should we pull out?",
+        type: "text",
+        placeholder: "e.g., customer email, query optimization times, code vulnerabilities",
+        required: true
+      },
+      {
+        id: "output_format",
+        label: "Output Format",
+        type: "select",
+        options: [
+          { 
+            label: "JSON Object", 
+            value: "JSON Object", 
+            hint: "Strict key-value pairs inside valid markdown codeblocks" 
+          },
+          { 
+            label: "Markdown Data Table", 
+            value: "Markdown Data Table", 
+            hint: "Aligned grid rows with clean column headers" 
+          },
+          { 
+            label: "Clean Schema List", 
+            value: "Clean Schema List", 
+            hint: "Property names backed by exact quotes" 
+          }
+        ],
+        required: true
+      }
+    ],
+    prompt_template: `[System Role]
+Act as a deterministic data extraction microservice. You execute raw string parsing without human interpretation or commentary.
+
+[Objective]
+Scan the incoming source material and isolate only the following targeted tracking targets: {fields}.
+
+[Execution Parameters]
+1. Output format protocol: {output_format}.
+2. If a requested data point cannot be found inside the text with absolute mathematical certainty, return null or a blank field. Do not invent context.
+3. Zero conversational outputs. Your response must be instantly processable by external parsing software.
+
+[Source Unstructured Material]
+{content}
+
+[Parsed Output Stream]:`
+  },
+
+  classify: {
+    id: "classify",
+    shortName: "Classify",
+    label: "Strategic Triage Engine",
+    description: "Sorts messy operational inputs into precise categories with optional architectural reasoning.",
+    fields: [
+      {
+        id: "content",
+        label: "Item to Categorize",
+        type: "textarea",
+        placeholder: "Paste customer tickets, code bugs, system logs, or text anomalies...",
+        required: true
+      },
+      {
+        id: "categories",
+        label: "Allowed Categories / Buckets",
+        type: "text",
+        placeholder: "e.g., Bug/Feature/Question, High/Medium/Low Priority, Positive/Negative",
+        required: true
+      },
+      {
+        id: "reasoning",
+        label: "Output Rules",
+        type: "select",
+        options: [
+          { 
+            label: "Category Name Only", 
+            value: "Output ONLY the final category string name. No other characters.", 
+            hint: "Strips all conversational text and reasoning." 
+          },
+          { 
+            label: "Include Analytical Reasoning", 
+            value: "Provide a 1-sentence analytical validation before outputting the final category classification.", 
+            hint: "Adds a brief step-by-step justification." 
+          }
+        ],
+        required: true
+      }
+    ],
+    prompt_template: `[System Role]
+Act as an automated operational triage router. You possess zero margin for categorization error.
+
+[Objective]
+Analyze the targeted input text and map it accurately into exactly one of these specified buckets: [{categories}].
+
+[Processing Instruction]
+Constraint: {reasoning}
+
+[Target Input Text]
+{content}
+
+[Triage Router Assignment]:`
+  },
+
+  write: {
+    id: "write",
+    shortName: "Draft",
+    label: "Professional Copy Architect",
+    description: "Generates high-conversion text blocks, documentation, or code changes with strict style metrics.",
+    fields: [
+      {
+        id: "content_type",
+        label: "What are you writing?",
+        type: "select",
+        options: [
+          { label: "Technical Product Documentation", value: "Technical Product Documentation" },
+          { label: "High-Conversion Cold Outreach Email", value: "High-Conversion Cold Outreach Email" },
+          { label: "LinkedIn Thought Leadership Post", value: "LinkedIn Thought Leadership Post" },
+          { label: "Engineering Release Changelog Summary", value: "Engineering Release Changelog Summary" }
+        ],
+        required: true
+      },
+      {
+        id: "topic",
+        label: "What is the core topic or goal?",
+        type: "text",
+        placeholder: "e.g., Shipping a client-side tokenizer engine reducing API dependencies to zero",
+        required: true
+      },
+      {
+        id: "tone",
+        label: "Tone of Voice",
+        type: "select",
+        options: [
+          { 
+            label: "Technical & Authoritative", 
+            value: "Technical & Authoritative", 
+            hint: "Metrics-heavy, completely unambiguous" 
+          },
+          { 
+            label: "Engaging & Persuasive", 
+            value: "Engaging & Persuasive", 
+            hint: "Clear narrative momentum, strong CTA hooks" 
+          },
+          { 
+            label: "Direct & Brief", 
+            value: "Direct & Brief", 
+            hint: "Slashes filler words, highly scannable layout" 
+          }
+        ],
+        required: true
+      },
+      {
+        id: "constraints",
+        label: "Extra Rules / Constraints (Optional)",
+        type: "text",
+        placeholder: "e.g., Keep under 150 words, include 3 specific metric markers, use active voice",
+        required: false
+      }
+    ],
+    prompt_template: `[System Role]
+Act as an elite technical copywriter and content strategist specializing in industry-specific clarity.
+
+[Objective]
+Construct a professional-grade {content_type} focused on: {topic}.
+
+[Style & Formatting Constraints]
+1. Stylistic Resonance Profile: {tone}.
+2. Additional structural restrictions: {constraints}.
+3. Avoid generic buzzwords (e.g., do not use words like 'revolutionize', 'synergy', or 'delve'). 
+4. Optimize for extreme readability by leveraging bullet layouts, short paragraphs, and bold focal hooks.
+
+[Draft Composition Output]:`
+  },
+
+  analyze: {
+    id: "analyze",
+    shortName: "Analyze",
+    label: "Qualitative Risk & Insight Analyst",
+    description: "Scrutinizes source text to isolate hidden vulnerabilities, systemic bottlenecks, or growth targets.",
+    fields: [
+      {
+        id: "content",
+        label: "Material to Audit",
+        type: "textarea",
+        placeholder: "Paste architecture descriptions, operational plans, codebase segments, or proposals...",
+        required: true
+      },
+      {
+        id: "focus",
+        label: "What should the analysis focus on?",
+        type: "select",
+        options: [
+          { label: "Security Vulnerabilities & Architecture Bottlenecks", value: "Security Vulnerabilities & Architecture Bottlenecks" },
+          { label: "Commercial Value Disconnects & Friction Points", value: "Commercial Value Disconnects & Friction Points" },
+          { label: "Process Optimization & Latency Drag Vectors", value: "Process Optimization & Latency Drag Vectors" }
+        ],
+        required: true
+      },
+      {
+        id: "output_format",
+        label: "Report Style",
+        type: "select",
+        options: [
+          { 
+            label: "Prioritized Risk Registry", 
+            value: "Prioritized Risk Registry", 
+            hint: "Ranked by critical threat level with clear fixes" 
+          },
+          { 
+            label: "SWOT Matrix", 
+            value: "SWOT Matrix", 
+            hint: "Structured breakdown of internal vs. external vectors" 
+          },
+          { 
+            label: "Gap Analysis Report", 
+            value: "Gap Analysis Report", 
+            hint: "Current performance state vs. ideal target layout" 
+          }
+        ],
+        required: true
+      }
+    ],
+    prompt_template: `[System Role]
+Act as a principal system architect and veteran operational risk consultant.
+
+[Objective]
+Execute an exhaustive, high-criticality diagnostic audit on the source material provided below. 
+
+[Focus Parameter]
+Your assessment must focus heavily on isolating: {focus}.
+
+[Report Layout Blueprint]
+Deliver the results formatted as a comprehensive {output_format}. Ensure every observation is backed by a direct contextual fact found in the source text, noting immediate, actionable remediation steps.
+
+[Source Material Under Audit]
+{content}
+
+[Diagnostic Assessment Output Report]:`
+  }
+};
