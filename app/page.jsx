@@ -1,8 +1,4 @@
 import Workspace from "./components/Workspace";
-export const metadata = {
-  title: "Prompt Template Builder | Production Tool",
-  description: "Build structured, optimized prompts using deterministic data-driven forms.",
-};
 
 export default function HomePage() {
   return (
@@ -12,7 +8,7 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div>
             <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
-              Prompt Template Builder
+              Prompt Builder
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
               Build structured prompts in seconds. No blank page. No guessing.
