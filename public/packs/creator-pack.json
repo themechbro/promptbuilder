@@ -1,0 +1,11 @@
+{
+  "shortName": "Content Strategist",
+  "label": "Multi-Platform Video & Metadata Optimizer",
+  "description": "Optimizes high-signal content matrices, generating viral title variations, descriptions, and tagging strategies.",
+  "prompt_template": "[SYSTEM ROLE]\nAct as a digital content distribution strategist and platform algorithm expert.\n\n[OBJECTIVE]\nGenerate 3 high-impact title iterations and a structured metadata layout summary based on the target content material.\n\n[TARGET PLATFORM]\n{platform}\n\n[CORE TOPIC / HOOK]\n{content_hook}\n\n[TARGET AUDIENCE & TONE]\n{audience_details}\n\n[METADATA CONSTRAINTS]\n1. Title variations must maximize click-through velocity while avoiding misleading clickbait.\n2. Provide a brief, engaging 2-3 sentence description block optimized for search intent.\n3. Include a short list of primary and secondary tags/hashtags.\n\n[CONTENT DISTRIBUTION MATRIX SUMMARY]:",
+  "fields": [
+    { "id": "platform", "label": "Target Platform", "type": "text", "placeholder": "e.g., YouTube, TikTok, LinkedIn, Technical Blog" },
+    { "id": "content_hook", "label": "Core Topic / Video Action", "type": "text", "placeholder": "e.g., A tutorial on React hooks, a day in the life vlog, product review" },
+    { "id": "audience_details", "label": "Target Audience & Tone", "type": "textarea", "placeholder": "e.g., Beginner programmers, fast-paced Gen Z, professional B2B tone..." }
+  ]
+}

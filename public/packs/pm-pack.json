@@ -1,0 +1,11 @@
+{
+  "shortName": "Feature Spec",
+  "label": "Agile User Story & PRD Generator",
+  "description": "Transforms rough feature ideas into strict Agile user stories with clear acceptance criteria.",
+  "prompt_template": "[SYSTEM ROLE]\nAct as a Senior Product Manager specializing in Agile methodologies.\n\n[OBJECTIVE]\nTransform the feature request below into a structured User Story and detailed Acceptance Criteria matrix.\n\n[FEATURE NAME]\n{feature_name}\n\n[TARGET USER PERSONA]\n{user_persona}\n\n[FEATURE DESCRIPTION / GOAL]\n{feature_goal}\n\n[EXECUTION PRIMITIVES]\n1. Provide the standard User Story format (As a [persona], I want to [action], so that [benefit]).\n2. List 3-5 strict Acceptance Criteria using Given/When/Then (BDD) format.\n3. Identify one potential edge case or technical risk to investigate.\n\n[AGILE SPECIFICATION OUTPUT]:",
+  "fields": [
+    { "id": "feature_name", "label": "Feature Name", "type": "text", "placeholder": "e.g., OAuth2 Google Login Integration" },
+    { "id": "user_persona", "label": "Target User Persona", "type": "text", "placeholder": "e.g., New enterprise customer, Free-tier user" },
+    { "id": "feature_goal", "label": "What are we trying to achieve?", "type": "textarea", "placeholder": "e.g., Allow users to bypass standard email signup to reduce friction and increase conversion rates..." }
+  ]
+}

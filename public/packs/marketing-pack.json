@@ -1,0 +1,11 @@
+{
+  "shortName": "SEO Optimizer",
+  "label": "SEO Metadata & Blog Outline Generator",
+  "description": "Generates highly optimized SEO titles, meta descriptions, and structural content outlines.",
+  "prompt_template": "[SYSTEM ROLE]\nAct as an elite SEO Strategist and Growth Marketer.\n\n[OBJECTIVE]\nGenerate an SEO-optimized metadata package and a structural blog outline based on the target keyword and topic.\n\n[TARGET KEYWORD]\n{keyword}\n\n[CONTENT TOPIC / ANGLE]\n{content_angle}\n\n[BRAND TONE]\n{brand_tone}\n\n[EXECUTION PRIMITIVES]\n1. Provide 3 options for the SEO Meta Title (under 60 characters).\n2. Provide 2 options for the Meta Description (under 160 characters) with a clear CTA.\n3. Generate a structural H1/H2/H3 outline that comprehensively covers the topic and targets featured snippets.\n\n[SEO OPTIMIZATION MATRIX]:",
+  "fields": [
+    { "id": "keyword", "label": "Primary Target Keyword", "type": "text", "placeholder": "e.g., Best open source LLM tools" },
+    { "id": "content_angle", "label": "Content Angle / Unique Value", "type": "text", "placeholder": "e.g., Comparing local performance vs cloud costs for enterprise developers" },
+    { "id": "brand_tone", "label": "Brand Tone", "type": "text", "placeholder": "e.g., Authoritative, data-driven, slightly conversational" }
+  ]
+}
