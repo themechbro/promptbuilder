@@ -2,10 +2,7 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-// import { templates } from "@/data/templates";
-// import { buildPrompt } from "@/utils/buildPrompt";
-// import { countTokens } from "@/utils/countTokens";
-import { templates } from "../data/templates";
+import { templates, getAllTemplates } from "../data/templates";
 import { buildPrompt } from "../data/utils/buildPrompt";
 import { countTokens } from "../data/utils/countTokens";
 import CategorySelector from "./CategorySelector";
@@ -17,9 +14,17 @@ const PdfUploader = dynamic(() => import("./PdfUploader"), {
   loading: () => <div className="text-xs font-mono text-slate-500 animate-pulse">Loading Pipeline...</div>
 });
 import QuickstartGuide from "./QuickstartGuide";
+import TemplateForge from "./TemplateForge";
+import CommunityHub from "./CommunityHub";
 
 export default function Workspace() {
+  // Core Application View Routing Tracking Layer
+  const [activeTab, setActiveTab] = useState("template"); // "template" | "sandbox" | "forge"
+  
+  // Dynamic Template Schema Registries State Matrix
+  const [templatesRegistry, setTemplatesRegistry] = useState({});
   const [activeCategory, setActiveCategory] = useState("summarize");
+  
   const [formValues, setFormValues] = useState({});
   const [generatedPrompt, setGeneratedPrompt] = useState("");
   const [tokenCount, setTokenCount] = useState(0);
@@ -27,48 +32,47 @@ export default function Workspace() {
   const [roughPrompt, setRoughPrompt] = useState("");
   const [roughTokenCount, setRoughTokenCount] = useState(0);
   const [history, setHistory] = useState([]);
-  const [activeTab, setActiveTab] = useState("template"); 
 
-  // V1.1.0 Usability States
+  // V1.1.0/V1.2.0 Pipeline Buffers
   const [chainBuffer, setChainBuffer] = useState(""); 
   const [promptVersions, setPromptVersions] = useState({}); 
 
-  // ==========================================
-  // FIXED: HOISTED API CREDENTIAL STATE VAULT
-  // ==========================================
+  // Hoisted Transient Credentials Vault
   const [geminiKey, setGeminiKey] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
   const [anthropicKey, setAnthropicKey] = useState("");
 
-// Add a safe fallback evaluation logic loop
-const currentTemplate = templates[activeCategory] || templates["summarize"] || Object.values(templates)[0];
+  // 1. FEATURE: Hydrate Registry Dynamically from System + Disk Cache
+  const refreshTemplates = () => {
+    const hydratedTemplates = getAllTemplates();
+    setTemplatesRegistry(hydratedTemplates);
+  };
 
-  // Testing
-useEffect(() => {
-    const handleSimulatedChain = (e) => {
-      setChainBuffer(e.detail);
-    };
+  // Run dynamic hydration on system mount
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    refreshTemplates();
+
+    const savedHistory = localStorage.getItem("prompt_builder_history");
+    if (savedHistory) {
+      try { setHistory(JSON.parse(savedHistory)); } catch (e) { console.error(e); }
+    }
+    
+    setGeminiKey(sessionStorage.getItem("sandbox_sk_gemini") || "");
+    setOpenaiKey(sessionStorage.getItem("sandbox_sk_openai") || "");
+    setAnthropicKey(sessionStorage.getItem("sandbox_sk_anthropic") || "");
+
+    const handleSimulatedChain = (e) => setChainBuffer(e.detail);
     document.addEventListener("simulateChainBuffer", handleSimulatedChain);
     return () => document.removeEventListener("simulateChainBuffer", handleSimulatedChain);
   }, []);
 
+  // Safe fallback evaluator layer
+  const currentTemplate = templatesRegistry[activeCategory] || templatesRegistry["summarize"] || Object.values(templatesRegistry)[0];
 
-  // Load history cache on mount
+  // Form Caching Layer
   useEffect(() => {
-    const savedHistory = localStorage.getItem("prompt_builder_history");
-    if (savedHistory) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      try { setHistory(JSON.parse(savedHistory)); } catch (e) { console.error(e); }
-    }
-    
-    // Secure Session Rehydration on Root Mount
-    setGeminiKey(sessionStorage.getItem("sandbox_sk_gemini") || "");
-    setOpenaiKey(sessionStorage.getItem("sandbox_sk_openai") || "");
-    setAnthropicKey(sessionStorage.getItem("sandbox_sk_anthropic") || "");
-  }, []);
-
-  // Form State Persistence Loader
-  useEffect(() => {
+    if (!activeCategory) return;
     const savedForm = localStorage.getItem(`form_cache_${activeCategory}`);
     if (savedForm) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -85,9 +89,10 @@ useEffect(() => {
     });
   };
 
+  // Compile prompt structures dynamically
   useEffect(() => {
+    if (!currentTemplate) return;
     const compiled = buildPrompt(currentTemplate.prompt_template, formValues);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setGeneratedPrompt(compiled);
     setTokenCount(countTokens(compiled));
     setRawContentTokens(countTokens(formValues["content"] || ""));
@@ -103,7 +108,7 @@ useEffect(() => {
   };
 
   const handleSaveToHistory = (finalPrompt) => {
-    if (!finalPrompt || finalPrompt.trim() === "") return;
+    if (!finalPrompt || finalPrompt.trim() === "" || !currentTemplate) return;
 
     setHistory((prev) => {
       if (prev[0]?.prompt === finalPrompt) return prev;
@@ -132,7 +137,7 @@ useEffect(() => {
     setActiveCategory(item.categoryId);
     setTimeout(() => {
       setFormValues(item.formValues);
-      localStorage.setItem(`form_cache_${item.createdAt}`, JSON.stringify(item.formValues));
+      localStorage.setItem(`form_cache_${item.categoryId}`, JSON.stringify(item.formValues));
     }, 50);
     setActiveTab("template"); 
   };
@@ -142,7 +147,6 @@ useEffect(() => {
     handleFieldChange("content", chainBuffer);
   };
 
-  // Reusable Shared Sub-Component Injector to prevent duplicate runtime codes
   const renderPromptOutputContainer = () => (
     <PromptOutput 
       prompt={generatedPrompt} 
@@ -156,7 +160,6 @@ useEffect(() => {
       setChainBuffer={setChainBuffer}
       versions={promptVersions[activeCategory] || []}
       onRestoreVersion={(restoredPrompt) => setGeneratedPrompt(restoredPrompt)}
-      // Pass Hoisted Credentials & State Hooks Down Natively
       geminiKey={geminiKey} setGeminiKey={setGeminiKey}
       openaiKey={openaiKey} setOpenaiKey={setOpenaiKey}
       anthropicKey={anthropicKey} setAnthropicKey={setAnthropicKey}
@@ -166,9 +169,9 @@ useEffect(() => {
   return (
     <div className="w-full space-y-6">
       
-      {/* View Mode Switcher */}
-      <div className="flex justify-between items-center bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-md">
-        <div className="flex gap-2 bg-slate-950 p-1 rounded-lg border border-slate-800/60">
+      {/* 3-Tab Master Nav Header Route Selector */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-md gap-4 w-full">
+        <div className="flex flex-wrap gap-2 bg-slate-950 p-1 rounded-lg border border-slate-800/60">
           <button
             type="button"
             onClick={() => setActiveTab("template")}
@@ -176,7 +179,7 @@ useEffect(() => {
               activeTab === "template" ? "bg-slate-800 text-slate-200 shadow border border-slate-700" : "text-slate-500 hover:text-slate-300"
             }`}
           >
-            📋 Template Studio View
+            📋 Template Studio
           </button>
           <button
             type="button"
@@ -186,47 +189,73 @@ useEffect(() => {
             }`}
           >
             <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
-            ⚡ Interactive Live Sandbox
+            ⚡ Interactive Sandbox
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("forge")}
+            className={`px-4 py-2 text-xs font-mono rounded-md font-semibold transition-all flex items-center gap-2 ${
+              activeTab === "forge" ? "bg-slate-800 text-amber-400 shadow border border-slate-700" : "text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            🔨 Custom Template Forge
+          </button>
+          <button
+          type="button"
+          onClick={() => setActiveTab("hub")}
+          className={`px-4 py-2 text-xs font-mono rounded-md font-semibold transition-all flex items-center gap-2 ${
+          activeTab === "hub" ? "bg-slate-800 text-emerald-400 shadow border border-slate-700" : "text-slate-500 hover:text-slate-300"
+  }`}
+>
+  📦 Community Hub
+</button>
         </div>
         
-        <div className="text-[11px] font-mono text-slate-500 bg-slate-950/40 px-3 py-1.5 rounded-lg border border-slate-850">
-          Status: <span className="text-emerald-400 font-bold">Stateless Layer Engaged</span>
+        <div className="text-[11px] font-mono text-slate-500 bg-slate-950/40 px-3 py-1.5 rounded-lg border border-slate-850 self-end sm:self-auto">
+          Status: <span className="text-emerald-400 font-bold">Dynamic Engine Layer Engaged</span>
         </div>
       </div>
 
-{/* ==========================================
-        NEW V1.1.0 INTEGRATION: INTERACTIVE QUICKSTART
-       ========================================== */}
-    <QuickstartGuide />
+      <QuickstartGuide />
 
-      {activeTab === "template" ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fadeIn">
+      {/* ==========================================
+          DYNAMIC 3-TAB RENDERING MULTIPLEXER
+         ========================================== */}
+      {activeTab === "forge" ? (
+        /* Render New Authoring Zone */
+        <TemplateForge onTemplatesUpdated={refreshTemplates} />
+      ) : activeTab === "template" ? (
+        /* Render Standard Studio Forms Split */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fadeIn w-full">
           <section className="lg:col-span-7 space-y-6">
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl">
               <h2 className="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-4 font-mono">Step 1: Select Workflow</h2>
-              <CategorySelector categories={Object.values(templates)} activeId={activeCategory} onSelect={handleCategoryChange} />
+              <CategorySelector categories={Object.values(templatesRegistry)} activeId={activeCategory} onSelect={handleCategoryChange} />
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl relative">
-              {chainBuffer && !formValues["content"] && (
-                <div className="absolute top-4 right-6 animate-pulse z-10">
-                  <button type="button" onClick={handleIngestChainBuffer} className="text-[10px] bg-indigo-600/20 text-indigo-400 border border-indigo-500/40 px-2.5 py-1 rounded-md hover:bg-indigo-600 hover:text-white transition-all font-mono">
-                    🔗 Link Upstream Output Data
-                  </button>
+            {currentTemplate && (
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl relative">
+                {chainBuffer && !formValues["content"] && (
+                  <div className="absolute top-4 right-6 animate-pulse z-10">
+                    <button type="button" onClick={handleIngestChainBuffer} className="text-[10px] bg-indigo-600/20 text-indigo-400 border border-indigo-500/40 px-2.5 py-1 rounded-md hover:bg-indigo-600 hover:text-white transition-all font-mono">
+                      🔗 Link Upstream Output Data
+                    </button>
+                  </div>
+                )}
+                <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <h2 className="text-lg font-medium text-slate-200">{currentTemplate.label}</h2>
+                    <p className="text-sm text-slate-400 mt-1">{currentTemplate.description}</p>
+                  </div>
+                  {activeCategory === "extractData" || activeCategory === "summarize" || activeCategory === "analyze" ? (
+                    <div className="w-full sm:w-auto sm:min-w-[260px]">
+                      <PdfUploader key={activeCategory} onTextExtracted={(markdown) => handleFieldChange("content", markdown)} />
+                    </div>
+                  ) : null}
                 </div>
-              )}
-              <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <h2 className="text-lg font-medium text-slate-200">{currentTemplate.label}</h2>
-                  <p className="text-sm text-slate-400 mt-1">{currentTemplate.description}</p>
-                </div>
-                <div className="w-full sm:w-auto sm:min-w-[260px]">
-                  <PdfUploader key={activeCategory} onTextExtracted={(markdown) => handleFieldChange("content", markdown)} />
-                </div>
+                <PromptForm fields={currentTemplate.fields} values={formValues} onFieldChange={handleFieldChange} />
               </div>
-              <PromptForm fields={currentTemplate.fields} values={formValues} onFieldChange={handleFieldChange} />
-            </div>
+            )}
 
             {history.length > 0 && (
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl">
@@ -250,27 +279,12 @@ useEffect(() => {
             {renderPromptOutputContainer()}
           </section>
         </div>
-      ) : (
+      ) : activeTab === "hub"? (<CommunityHub onTemplatesUpdated={refreshTemplates}/>):(
+        /* Render Expanded Sandbox Playground Matrix */
         <div className="w-full animate-fadeIn">
           {renderPromptOutputContainer()}
         </div>
       )}
-  {/* AUTOMATION QA DISCOVERY TRAY */}
-<div className="w-full pt-4 border-t border-slate-800/40">
-  <DiagnosticTestHarness 
-    activeTab={activeTab}
-    setActiveTab={setActiveTab}
-    activeCategory={activeCategory}
-    onSimulateCategoryChange={handleCategoryChange}
-    formValues={formValues}
-    chainBuffer={chainBuffer}
-    onSimulateFormInjected={(mockInputs, targetCategory) => {
-      setFormValues(mockInputs);
-      // Synchronously write directly to disk to clear out asynchronous batching failures
-      localStorage.setItem(`form_cache_${targetCategory}`, JSON.stringify(mockInputs));
-    }}
-  />
-</div>
-  </div>
+    </div>
   );
 }

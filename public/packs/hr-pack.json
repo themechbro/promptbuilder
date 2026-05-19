@@ -1,0 +1,11 @@
+{
+  "shortName": "Recruit Align",
+  "label": "Candidate Outreach & Pipeline Communicator",
+  "description": "Generates tailored outreach loops, interview context, and application updates for any professional role.",
+  "prompt_template": "[SYSTEM ROLE]\nAct as an elite talent acquisition coordinator and recruiting partner.\n\n[OBJECTIVE]\nDraft a professional, metrics-driven communication layout targeting a candidate based on the parameters provided.\n\n[CANDIDATE PROFILE]\n{candidate_name}\n\n[TARGET ROLE & KEY SKILLS]\n{role_details}\n\n[CURRENT PIPELINE STATUS]\n{status_context}\n\n[COMPOSITION PRIMITIVES]\n1. Tailor the focal talking points directly to the skills mentioned in the role details.\n2. Keep the narrative brief, polished, and authoritative without generic corporate jargon.\n3. End with a clear, single call-to-action regarding the next steps in the pipeline.\n\n[OUTBOUND DISPATCH BRIEFING DRAFT]:",
+  "fields": [
+    { "id": "candidate_name", "label": "Candidate Name", "type": "text", "placeholder": "e.g., Alex Johnson" },
+    { "id": "role_details", "label": "Target Role & Core Tech Stack", "type": "text", "placeholder": "e.g., Senior Frontend Engineer - React, Next.js, Tailwind" },
+    { "id": "status_context", "label": "Current Pipeline Context / Next Step", "type": "textarea", "placeholder": "e.g., Passed technical screen, moving to final behavioral round. Need their availability for next week." }
+  ]
+}

@@ -1,4 +1,4 @@
-export const templates = {
+export const systemTemplates = {
   summarize: {
     id: "summarize",
     shortName: "Summarize",
@@ -16,46 +16,14 @@ export const templates = {
         id: "format",
         label: "Summary Style",
         type: "select",
-        options: [
-          { 
-            label: "Prioritized Bullet Points", 
-            value: "Prioritized Bullet Points", 
-            hint: "Action-oriented, impact-focused" 
-          },
-          { 
-            label: "Executive Abstract", 
-            value: "Executive Abstract", 
-            hint: "A concise, 3-sentence high-level overview" 
-          },
-          { 
-            label: "Technical Breakdown", 
-            value: "Technical Breakdown", 
-            hint: "Categorized by sub-systems and metrics" 
-          }
-        ],
+        options: ["Prioritized Bullet Points", "Executive Abstract", "Technical Breakdown"],
         required: true
       },
       {
         id: "audience",
         label: "Who is reading this?",
         type: "select",
-        options: [
-          { 
-            label: "Non-Technical Stakeholders", 
-            value: "Non-Technical Stakeholders", 
-            hint: "Clear business value, zero jargon" 
-          },
-          { 
-            label: "C-Suite Executives", 
-            value: "C-Suite Executives", 
-            hint: "Bottom-line impact, risks, high-level KPIs" 
-          },
-          { 
-            label: "Engineering Team", 
-            value: "Engineering Team", 
-            hint: "Deep implementation details, edge cases, system facts" 
-          }
-        ],
+        options: ["Non-Technical Stakeholders", "C-Suite Executives", "Engineering Team"],
         required: true
       }
     ],
@@ -76,8 +44,8 @@ Condense the source material provided below. Deliver high-signal information tai
 [Strategic Briefing Output]:`
   },
 
-  extract_data: {
-    id: "extract_data",
+  extractData: { // FIXED: Changed from extract_data to camelCase to match Workspace.jsx state tracking maps
+    id: "extractData",
     shortName: "Extract Data",
     label: "Semantic Data Parser",
     description: "Strips conversational fluff and maps unstructured data directly into clean structural schemas.",
@@ -100,23 +68,7 @@ Condense the source material provided below. Deliver high-signal information tai
         id: "output_format",
         label: "Output Format",
         type: "select",
-        options: [
-          { 
-            label: "JSON Object", 
-            value: "JSON Object", 
-            hint: "Strict key-value pairs inside valid markdown codeblocks" 
-          },
-          { 
-            label: "Markdown Data Table", 
-            value: "Markdown Data Table", 
-            hint: "Aligned grid rows with clean column headers" 
-          },
-          { 
-            label: "Clean Schema List", 
-            value: "Clean Schema List", 
-            hint: "Property names backed by exact quotes" 
-          }
-        ],
+        options: ["JSON Object", "Markdown Data Table", "Clean Schema List"],
         required: true
       }
     ],
@@ -161,18 +113,7 @@ Scan the incoming source material and isolate only the following targeted tracki
         id: "reasoning",
         label: "Output Rules",
         type: "select",
-        options: [
-          { 
-            label: "Category Name Only", 
-            value: "Output ONLY the final category string name. No other characters.", 
-            hint: "Strips all conversational text and reasoning." 
-          },
-          { 
-            label: "Include Analytical Reasoning", 
-            value: "Provide a 1-sentence analytical validation before outputting the final category classification.", 
-            hint: "Adds a brief step-by-step justification." 
-          }
-        ],
+        options: ["Category Name Only", "Include Analytical Reasoning"],
         required: true
       }
     ],
@@ -191,7 +132,7 @@ Constraint: {reasoning}
 [Triage Router Assignment]:`
   },
 
-  write: {
+  write: { // Matches your "Draft" component view tracking parameters
     id: "write",
     shortName: "Draft",
     label: "Professional Copy Architect",
@@ -201,12 +142,7 @@ Constraint: {reasoning}
         id: "content_type",
         label: "What are you writing?",
         type: "select",
-        options: [
-          { label: "Technical Product Documentation", value: "Technical Product Documentation" },
-          { label: "High-Conversion Cold Outreach Email", value: "High-Conversion Cold Outreach Email" },
-          { label: "LinkedIn Thought Leadership Post", value: "LinkedIn Thought Leadership Post" },
-          { label: "Engineering Release Changelog Summary", value: "Engineering Release Changelog Summary" }
-        ],
+        options: ["Technical Product Documentation", "High-Conversion Cold Outreach Email", "LinkedIn Thought Leadership Post", "Engineering Release Changelog Summary"],
         required: true
       },
       {
@@ -220,23 +156,7 @@ Constraint: {reasoning}
         id: "tone",
         label: "Tone of Voice",
         type: "select",
-        options: [
-          { 
-            label: "Technical & Authoritative", 
-            value: "Technical & Authoritative", 
-            hint: "Metrics-heavy, completely unambiguous" 
-          },
-          { 
-            label: "Engaging & Persuasive", 
-            value: "Engaging & Persuasive", 
-            hint: "Clear narrative momentum, strong CTA hooks" 
-          },
-          { 
-            label: "Direct & Brief", 
-            value: "Direct & Brief", 
-            hint: "Slashes filler words, highly scannable layout" 
-          }
-        ],
+        options: ["Technical & Authoritative", "Engaging & Persuasive", "Direct & Brief"],
         required: true
       },
       {
@@ -279,34 +199,14 @@ Construct a professional-grade {content_type} focused on: {topic}.
         id: "focus",
         label: "What should the analysis focus on?",
         type: "select",
-        options: [
-          { label: "Security Vulnerabilities & Architecture Bottlenecks", value: "Security Vulnerabilities & Architecture Bottlenecks" },
-          { label: "Commercial Value Disconnects & Friction Points", value: "Commercial Value Disconnects & Friction Points" },
-          { label: "Process Optimization & Latency Drag Vectors", value: "Process Optimization & Latency Drag Vectors" }
-        ],
+        options: ["Security Vulnerabilities & Architecture Bottlenecks", "Commercial Value Disconnects & Friction Points", "Process Optimization & Latency Drag Vectors"],
         required: true
       },
       {
         id: "output_format",
         label: "Report Style",
         type: "select",
-        options: [
-          { 
-            label: "Prioritized Risk Registry", 
-            value: "Prioritized Risk Registry", 
-            hint: "Ranked by critical threat level with clear fixes" 
-          },
-          { 
-            label: "SWOT Matrix", 
-            value: "SWOT Matrix", 
-            hint: "Structured breakdown of internal vs. external vectors" 
-          },
-          { 
-            label: "Gap Analysis Report", 
-            value: "Gap Analysis Report", 
-            hint: "Current performance state vs. ideal target layout" 
-          }
-        ],
+        options: ["Prioritized Risk Registry", "SWOT Matrix", "Gap Analysis Report"],
         required: true
       }
     ],
@@ -328,3 +228,18 @@ Deliver the results formatted as a comprehensive {output_format}. Ensure every o
 [Diagnostic Assessment Output Report]:`
   }
 };
+
+export function getAllTemplates() {
+  if (typeof window === "undefined") return systemTemplates;
+  
+  const savedCustom = localStorage.getItem("prompt_builder_custom_templates");
+  if (!savedCustom) return systemTemplates;
+
+  try {
+    const parsedCustom = JSON.parse(savedCustom);
+    return { ...systemTemplates, ...parsedCustom };
+  } catch (e) {
+    console.error("Failed to hydrate custom templates from localStorage:", e);
+    return systemTemplates;
+  }
+}
