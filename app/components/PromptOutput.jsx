@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function PromptOutput({ 
   prompt, 
@@ -8,17 +8,22 @@ export default function PromptOutput({
   setRoughPrompt,
   roughTokenCount,
   onActionTriggered,
-  activeTab // Read directly from global parent controller
+  activeTab,
+  setChainBuffer,
+  versions = [],
+  onRestoreVersion,
+  // Consume hoisted credentials parameters natively
+  geminiKey, setGeminiKey,
+  openaiKey, setOpenaiKey,
+  anthropicKey, setAnthropicKey
 }) {
   const [copied, setCopied] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
+  
+  const executionButtonRef = useRef(null);
+  const copyButtonRef = useRef(null);
 
-  // Secure API Session Key Memory States
-  const [geminiKey, setGeminiKey] = useState("");
-  const [openaiKey, setOpenaiKey] = useState("");
-  const [anthropicKey, setAnthropicKey] = useState("");
-
-  // Running Output States
+  // Runtime response tracking states
   const [geminiOutput, setGeminiOutput] = useState("");
   const [geminiLoading, setGeminiLoading] = useState(false);
   const [geminiMetrics, setGeminiMetrics] = useState(null);
@@ -36,14 +41,33 @@ export default function PromptOutput({
 
   const isPromptEmpty = !prompt || prompt.trim() === "";
   const hasBaselinePrompt = roughPrompt && roughPrompt.trim() !== "";
+  const isAnyModelLoading = geminiLoading || openaiLoading || anthropicLoading;
 
-  // Secure Session Hydration
+  // ==========================================
+  // FIXED: ADAPTIVE SHORTCUT INTERCEPTOR LOOP
+  // ==========================================
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setGeminiKey(sessionStorage.getItem("sandbox_sk_gemini") || "");
-    setOpenaiKey(sessionStorage.getItem("sandbox_sk_openai") || "");
-    setAnthropicKey(sessionStorage.getItem("sandbox_sk_anthropic") || "");
-  }, []);
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        
+        if (activeTab === "sandbox") {
+          // In Sandbox Mode: Run Execution Pipeline
+          if (executionButtonRef.current && !executionButtonRef.current.disabled) {
+            executionButtonRef.current.click();
+          }
+        } else if (activeTab === "template") {
+          // In Template View Mode: Run Clipboard Copy
+          if (copyButtonRef.current && !copyButtonRef.current.disabled) {
+            copyButtonRef.current.click();
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeTab, isPromptEmpty, isAnyModelLoading]);
 
   const handleSaveKeys = () => {
     sessionStorage.setItem("sandbox_sk_gemini", geminiKey);
@@ -60,7 +84,7 @@ export default function PromptOutput({
       onActionTriggered(); 
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error(err);
+      console.error("OS Clipboard ingestion failed:", err);
     }
   };
 
@@ -77,7 +101,7 @@ export default function PromptOutput({
       document.body.removeChild(link);
       onActionTriggered(); 
     } catch (err) {
-      console.error(err);
+      console.error("File download aborted:", err);
     }
   };
 
@@ -92,7 +116,11 @@ export default function PromptOutput({
         body: JSON.stringify({ provider: "gemini", prompt, apiKey: geminiKey })
       })
         .then(res => res.json())
-        .then(data => { if (data.error) throw new Error(data.error); setGeminiOutput(data.output); setGeminiMetrics(data.metrics); })
+        .then(data => { 
+          if (data.error) throw new Error(data.error); 
+          setGeminiOutput(data.output); setGeminiMetrics(data.metrics);
+          setChainBuffer(data.output); 
+        })
         .catch(err => setGeminiError(err.message))
         .finally(() => setGeminiLoading(false));
     }
@@ -105,7 +133,11 @@ export default function PromptOutput({
         body: JSON.stringify({ provider: "openai", prompt, apiKey: openaiKey })
       })
         .then(res => res.json())
-        .then(data => { if (data.error) throw new Error(data.error); setOpenaiOutput(data.output); setOpenaiMetrics(data.metrics); })
+        .then(data => { 
+          if (data.error) throw new Error(data.error); 
+          setOpenaiOutput(data.output); setOpenaiMetrics(data.metrics);
+          setChainBuffer(data.output); 
+        })
         .catch(err => setOpenaiError(err.message))
         .finally(() => setOpenaiLoading(false));
     }
@@ -118,7 +150,11 @@ export default function PromptOutput({
         body: JSON.stringify({ provider: "anthropic", prompt, apiKey: anthropicKey })
       })
         .then(res => res.json())
-        .then(data => { if (data.error) throw new Error(data.error); setAnthropicOutput(data.output); setAnthropicMetrics(data.metrics); })
+        .then(data => { 
+          if (data.error) throw new Error(data.error); 
+          setAnthropicOutput(data.output); setAnthropicMetrics(data.metrics);
+          setChainBuffer(data.output); 
+        })
         .catch(err => setAnthropicError(err.message))
         .finally(() => setAnthropicLoading(false));
     }
@@ -173,12 +209,11 @@ export default function PromptOutput({
   };
 
   const configuredProviders = [
-    { id: "gemini", key: geminiKey, loading: geminiLoading, output: geminiOutput, metrics: geminiMetrics, error: geminiError, name: "Gemini 2.5 Flash", color: "text-blue-400", dot: "bg-blue-400" },
+    { id: "gemini", key: geminiKey, loading: geminiLoading, output: geminiOutput, metrics: geminiMetrics, error: geminiError, name: "Gemini 3.1 Flash Lite", color: "text-blue-400", dot: "bg-blue-400" },
     { id: "openai", key: openaiKey, loading: openaiLoading, output: openaiOutput, metrics: openaiMetrics, error: openaiError, name: "GPT-4o Mini", color: "text-emerald-400", dot: "bg-emerald-400" },
-    { id: "anthropic", key: anthropicKey, loading: anthropicLoading, output: anthropicOutput, metrics: anthropicMetrics, error: anthropicError, name: "Claude 3.5 Haiku", color: "text-orange-400", dot: "bg-orange-400" }
+    { id: "anthropic", key: anthropicKey, loading: anthropicLoading, output: anthropicOutput, metrics: anthropicMetrics, error: anthropicError, name: "Claude 4.5 Haiku", color: "text-orange-400", dot: "bg-orange-400" }
   ].filter(p => p.key.trim() !== "");
 
-  // Scaled for full screen layouts safely
   const gridLayoutClass = 
     configuredProviders.length === 1 ? "grid-cols-1" : 
     configuredProviders.length === 2 ? "grid-cols-1 md:grid-cols-2" : 
@@ -232,7 +267,29 @@ export default function PromptOutput({
           )}
 
           <div className="border-t border-slate-800/60 my-2" />
-          <h2 className="text-xs font-semibold tracking-wider text-slate-400 uppercase font-mono">Step 2: Compiled Output</h2>
+          
+          <div className="flex justify-between items-center">
+            <h2 className="text-xs font-semibold tracking-wider text-slate-400 uppercase font-mono">Step 2: Compiled Output</h2>
+            {versions.length > 1 && (
+              <div className="flex items-center gap-1.5 bg-slate-950 px-2 py-1 rounded-md border border-slate-800/60 font-mono text-[10px]">
+                <span className="text-slate-600">History:</span>
+                {versions.map((ver, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => onRestoreVersion(ver)}
+                    className={`px-1.5 py-0.5 rounded transition-all font-bold ${
+                      prompt === ver 
+                        ? "bg-indigo-600/30 text-indigo-400 border border-indigo-500/30" 
+                        : "text-slate-500 hover:text-slate-300 hover:bg-slate-900"
+                    }`}
+                  >
+                    v{versions.length - idx}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="w-full min-h-[260px] max-h-[380px] bg-slate-950 border border-slate-800 rounded-lg p-4 font-mono text-xs whitespace-pre-wrap overflow-y-auto text-slate-300 leading-relaxed">
             {isPromptEmpty ? (
@@ -247,11 +304,13 @@ export default function PromptOutput({
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
             <button
               type="button"
+              ref={copyButtonRef} // FIXED: Hotkey target pointer hooks here
               disabled={isPromptEmpty}
               onClick={handleCopy}
-              className={`sm:col-span-8 py-2.5 rounded-lg text-xs font-semibold font-mono uppercase border flex items-center justify-center ${isPromptEmpty ? "bg-slate-800/20 border-slate-800 text-slate-600 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-500 border-indigo-500 text-white"}`}
+              className={`sm:col-span-8 py-2.5 rounded-lg text-xs font-semibold font-mono uppercase border flex items-center justify-center gap-2 ${isPromptEmpty ? "bg-slate-800/20 border-slate-800 text-slate-600 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-500 border-indigo-500 text-white shadow"}`}
             >
-              {copied ? "Copied!" : "Copy Prompt Structure"}
+              <span>{copied ? "Copied!" : "Copy Prompt Structure"}</span>
+              <kbd className="hidden sm:inline-block bg-indigo-800/50 border border-indigo-500/30 px-1.5 py-0.5 rounded text-[9px] font-sans font-normal lowercase tracking-normal">ctrl + enter</kbd>
             </button>
             <button
               type="button"
@@ -269,14 +328,8 @@ export default function PromptOutput({
       {activeTab === "sandbox" && (
         <div className="space-y-4 flex flex-col h-full w-full animate-fadeIn">
           <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-            <h2 className="text-xs font-bold font-mono tracking-wider text-slate-400 uppercase">
-              Live Multi-Runtime Execution Dashboard
-            </h2>
-            <button
-              type="button"
-              onClick={() => setShowKeys(!showKeys)}
-              className="text-[11px] font-mono border border-slate-800 bg-slate-950 px-3 py-1 rounded-md text-slate-400 hover:text-slate-200 hover:border-slate-700 transition-all shadow"
-            >
+            <h2 className="text-xs font-bold font-mono tracking-wider text-slate-400 uppercase">Live Multi-Runtime Execution Dashboard</h2>
+            <button type="button" onClick={() => setShowKeys(!showKeys)} className="text-[11px] font-mono border border-slate-800 bg-slate-950 px-3 py-1 rounded-md text-slate-400 hover:text-slate-200 hover:border-slate-700 transition-all shadow">
               {showKeys ? "Hide Setup Panel" : "⚙️ Manage API Keys"}
             </button>
           </div>
@@ -286,42 +339,22 @@ export default function PromptOutput({
             <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl space-y-3 shadow-inner max-w-xl">
               <div className="flex justify-between items-center border-b border-slate-900 pb-1.5">
                 <span className="text-[10px] font-bold font-mono uppercase text-indigo-400">Adaptive API Key Manager</span>
-                <span className="text-[9px] text-slate-600 font-sans">Stored in transient memory</span>
+                <span className="text-[9px] text-slate-600 font-sans">Stored securely in browser memory space</span>
               </div>
               <div className="space-y-2">
                 <div>
-                  <label className="text-[10px] font-mono text-slate-500 block mb-1">GEMINI API KEY (Google AI Studio Free Tier)</label>
-                  <input
-                    type="password"
-                    value={geminiKey}
-                    onChange={(e) => setGeminiKey(e.target.value)}
-                    placeholder={geminiKey ? "••••••••••••••••••••" : "Paste Gemini API Key..."}
-                    className="w-full bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded text-xs text-slate-300 font-mono focus:outline-none focus:border-slate-700"
-                  />
+                  <label className="text-[10px] font-mono text-slate-500 block mb-1">GEMINI API KEY</label>
+                  <input type="password" value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)} placeholder="Paste Gemini API Key..." className="w-full bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded text-xs text-slate-300 font-mono focus:outline-none focus:border-slate-700" />
                 </div>
                 <div>
                   <label className="text-[10px] font-mono text-slate-500 block mb-1">OPENAI API KEY (Optional)</label>
-                  <input
-                    type="password"
-                    value={openaiKey}
-                    onChange={(e) => setOpenaiKey(e.target.value)}
-                    placeholder={openaiKey ? "••••••••••••••••••••" : "Paste OpenAI API Key..."}
-                    className="w-full bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded text-xs text-slate-300 font-mono focus:outline-none focus:border-slate-700"
-                  />
+                  <input type="password" value={openaiKey} onChange={(e) => setOpenaiKey(e.target.value)} placeholder="Paste OpenAI API Key..." className="w-full bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded text-xs text-slate-300 font-mono focus:outline-none focus:border-slate-700" />
                 </div>
                 <div>
                   <label className="text-[10px] font-mono text-slate-500 block mb-1">ANTHROPIC API KEY (Optional)</label>
-                  <input
-                    type="password"
-                    value={anthropicKey}
-                    onChange={(e) => setAnthropicKey(e.target.value)}
-                    placeholder={anthropicKey ? "••••••••••••••••••••" : "Paste Anthropic API Key..."}
-                    className="w-full bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded text-xs text-slate-300 font-mono focus:outline-none focus:border-slate-700"
-                  />
+                  <input type="password" value={anthropicKey} onChange={(e) => setAnthropicKey(e.target.value)} placeholder="Paste Anthropic API Key..." className="w-full bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded text-xs text-slate-300 font-mono focus:outline-none focus:border-slate-700" />
                 </div>
-                <button type="button" onClick={handleSaveKeys} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-bold py-1.5 rounded transition-all">
-                  Commit Keys to Memory
-                </button>
+                <button type="button" onClick={handleSaveKeys} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-bold py-1.5 rounded transition-all">Save Key Configurations</button>
               </div>
             </div>
           )}
@@ -330,17 +363,14 @@ export default function PromptOutput({
           {!hasAnyKey ? (
             <div className="h-64 flex flex-col items-center justify-center text-center text-slate-600 border border-dashed border-slate-800 rounded-xl p-6 font-sans">
               <span className="text-sm font-medium mb-1 text-slate-400">No Target Engines Configured</span>
-              <span className="text-xs text-slate-600 max-w-xs">Input your free Gemini developer key to spin up the execution panel viewports.</span>
+              <span className="text-xs text-slate-600 max-w-xs">Input your free Gemini developer key to unlock execution panels.</span>
             </div>
           ) : (
             <div className={`grid ${gridLayoutClass} gap-6 w-full flex-grow`}>
               {configuredProviders.map((provider) => (
                 <div key={provider.id} className="bg-slate-950 border border-slate-850 rounded-xl p-5 flex flex-col min-h-[380px] w-full shadow-lg">
                   <div className="flex justify-between items-center border-b border-slate-900 pb-2.5">
-                    <span className={`text-xs font-bold ${provider.color} font-mono flex items-center gap-1.5`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${provider.dot}`} />
-                      {provider.name}
-                    </span>
+                    <span className={`text-xs font-bold ${provider.color} font-mono flex items-center gap-1.5`}><span className={`w-1.5 h-1.5 rounded-full ${provider.dot}`} />{provider.name}</span>
                     {provider.metrics && (
                       <span className="text-[10px] font-mono text-slate-500 bg-slate-900/60 border border-slate-850 px-2 py-0.5 rounded-md">
                         In: <strong className="text-slate-400">{provider.metrics.inputTokens}</strong> | Out: <strong className="text-slate-400">{provider.metrics.outputTokens}</strong>
@@ -367,18 +397,20 @@ export default function PromptOutput({
           {/* Master Execution CTA Button */}
           <button
             type="button"
-            disabled={isPromptEmpty || !hasAnyKey || geminiLoading || openaiLoading || anthropicLoading}
+            ref={executionButtonRef} // FIXED: Hotkey target pointer hooks here
+            disabled={isPromptEmpty || !hasAnyKey || isAnyModelLoading}
             onClick={handleLiveExecution}
-            className={`w-full py-3.5 rounded-xl text-xs font-bold font-mono tracking-wider uppercase border flex items-center justify-center gap-2 ${isPromptEmpty || !hasAnyKey ? "bg-slate-800/20 border-slate-800 text-slate-600 cursor-not-allowed" : geminiLoading || openaiLoading || anthropicLoading ? "bg-amber-500/10 border-amber-500/40 text-amber-400 cursor-wait" : "bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 border-indigo-500 text-white shadow-xl shadow-indigo-900/20 transition-all active:scale-[0.99]"}`}
+            className={`w-full py-3.5 rounded-xl text-xs font-bold font-mono tracking-wider uppercase border flex items-center justify-center gap-2 ${isPromptEmpty || !hasAnyKey ? "bg-slate-800/20 border-slate-800 text-slate-600 cursor-not-allowed" : isAnyModelLoading ? "bg-amber-500/10 border-amber-500/40 text-amber-400 cursor-wait" : "bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 border-indigo-500 text-white shadow-xl shadow-indigo-900/20 transition-all active:scale-[0.99]"}`}
           >
-            {geminiLoading || openaiLoading || anthropicLoading ? (
+            {isAnyModelLoading ? (
               <><span className="w-3.5 h-3.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />Processing Active Runtimes...</>
             ) : !hasAnyKey ? (
               "Initialize Active Credentials to Run"
-            ) : configuredProviders.length === 1 ? (
-              `⚡ Execute Live Runtime Prompt (${configuredProviders[0].name})`
             ) : (
-              `⚡ Run Concurrent Multi-Model Assessment (${configuredProviders.length} Active Engines)`
+              <div className="flex items-center gap-2">
+                <span>⚡ Run Live Execution</span>
+                <kbd className="hidden sm:inline-block bg-indigo-800/60 border border-indigo-500/40 px-1.5 py-0.5 rounded text-[10px] font-sans font-normal lowercase tracking-normal">ctrl + enter</kbd>
+              </div>
             )}
           </button>
         </div>
