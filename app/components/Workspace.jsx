@@ -16,6 +16,7 @@ const PdfUploader = dynamic(() => import("./PdfUploader"), {
   ssr: false,
   loading: () => <div className="text-xs font-mono text-slate-500 animate-pulse">Loading Pipeline...</div>
 });
+import QuickstartGuide from "./QuickstartGuide";
 
 export default function Workspace() {
   const [activeCategory, setActiveCategory] = useState("summarize");
@@ -193,6 +194,11 @@ useEffect(() => {
           Status: <span className="text-emerald-400 font-bold">Stateless Layer Engaged</span>
         </div>
       </div>
+
+{/* ==========================================
+        NEW V1.1.0 INTEGRATION: INTERACTIVE QUICKSTART
+       ========================================== */}
+    <QuickstartGuide />
 
       {activeTab === "template" ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fadeIn">

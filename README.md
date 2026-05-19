@@ -56,6 +56,32 @@ Switch to Live Sandbox, add your API key, and execute directly against Gemini, G
 
 ---
 
+## 📖 Interactive Operational Pipeline Walkthrough
+
+Follow this 4-stage sequential workflow to unlock the maximum technical efficiency of the workbench:
+
+### Phase 1: Context Aggregation & Schema Synthesis
+1. Select your target engineering microservice from the workflow selector grid (e.g., **Extract Data** or **Analyze**).
+2. Input your custom parameter variables inside the reactive form fields, or drop an architectural schema PDF into the edge pipeline processing node to instantly parse text content variables.
+3. Observe real-time state synchronization updating your variables on the reactive template canvas.
+
+### Phase 2: Accelerated Core Compilation & Export
+1. With your form fields set, hit the power-user shortcut **`Ctrl + Enter`** (or **`Cmd + Enter`** on macOS).
+2. The compilation engine instantly resolves delimiters (`[SYSTEM ROLE]`, `[OBJECTIVE]`), parses structural parameters, and injects the output directly onto your operating system clipboard.
+3. Check the integrated telemetry indicator to track your compiled template length vs. raw resource content weights.
+
+### Phase 3: Cross-Runtime Multi-Model Sandboxing
+1. Toggle to the **⚡ Interactive Live Sandbox** view utilizing the master navigation grid header.
+2. If this is your first session execution run, tap **⚙️ Manage API Keys** and securely load your upstream free-tier Gemini API token directly into isolation memory.
+3. Focus your cursor on the canvas workspace and trigger **`Ctrl + Enter`** to send concurrent API proxy dispatches to evaluate raw execution variations.
+
+### Phase 4: Downstream Step Chaining Pipeline Handoff
+1. Leave the sandbox view and switch to a consecutive workflow context (e.g., changing category layouts from *Extract Data* to *Analyze*).
+2. Because a successful run payload is securely resting in the parent data buffer, a pulsing token labeled **`🔗 Link Upstream Output Data`** will automatically wake up.
+3. Click the link token to instantly populate the active form text container with your previous output matrix, completely eliminating manual copy-paste overhead.
+
+---
+
 ## Architecture
 
 Direct API calls from the browser are blocked by CORS restrictions on all three providers. Instead of asking users to expose their keys to a third-party backend, this tool uses a minimal Next.js serverless route as a passthrough proxy:
