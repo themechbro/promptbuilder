@@ -35,6 +35,7 @@ export default function PromptOutput({
 }) {
   const [copied, setCopied] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
+  const [savedChainProvider, setSavedChainProvider] = useState("");
 
   const executionButtonRef = useRef(null);
   const copyButtonRef = useRef(null);
@@ -119,6 +120,11 @@ export default function PromptOutput({
     setChainBuffer(output);
   };
 
+  const handleSaveProviderToChain = (provider) => {
+    commitChainOutput(provider.output);
+    setSavedChainProvider(provider.id);
+  };
+
   const runProvider = async ({ id, key, setLoading, setOutput, setMetrics, setError }) => {
     if (!key.trim()) return;
 
@@ -126,6 +132,7 @@ export default function PromptOutput({
     setError("");
     setOutput("");
     setMetrics(null);
+    setSavedChainProvider("");
 
     try {
       const response = await fetch("/api/execute", {
@@ -137,7 +144,6 @@ export default function PromptOutput({
       if (data.error) throw new Error(data.error);
       setOutput(data.output);
       setMetrics(data.metrics);
-      commitChainOutput(data.output);
     } catch (error) {
       setError(error.message);
     } finally {
@@ -188,6 +194,134 @@ export default function PromptOutput({
       }
       return <span key={index}>{part}</span>;
     });
+  };
+
+  const normalizeModelOutput = (value) => {
+    if (typeof value === "string") return value;
+    if (value === null || value === undefined) return "";
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  };
+
+  const renderModelOutput = (value) => {
+    const text = normalizeModelOutput(value).trim();
+    if (!text) return <span className="text-slate-600">Run the prompt to see this model response.</span>;
+
+    if ((text.startsWith("{") && text.endsWith("}")) || (text.startsWith("[") && text.endsWith("]"))) {
+      try {
+        const parsed = JSON.parse(text);
+        return (
+          <pre className="overflow-x-auto rounded-lg border border-white/10 bg-[#0b1020] p-3 font-mono text-xs leading-relaxed text-emerald-200">
+            {JSON.stringify(parsed, null, 2)}
+          </pre>
+        );
+      } catch {
+        // Fall back to line formatter below.
+      }
+    }
+
+    const lines = text.split("\n");
+    const rendered = [];
+
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      const trimmed = line.trim();
+
+      if (!trimmed) {
+        rendered.push(<div key={`space-${index}`} className="h-2" />);
+        continue;
+      }
+
+      if (trimmed.startsWith("```")) {
+        const codeLines = [];
+        index += 1;
+        while (index < lines.length && !lines[index].trim().startsWith("```")) {
+          codeLines.push(lines[index]);
+          index += 1;
+        }
+        rendered.push(
+          <pre key={`code-${index}`} className="my-3 overflow-x-auto rounded-lg border border-white/10 bg-[#0b1020] p-3 font-mono text-xs leading-relaxed text-emerald-200">
+            {codeLines.join("\n")}
+          </pre>
+        );
+        continue;
+      }
+
+      if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+        const tableLines = [trimmed];
+        while (index + 1 < lines.length && lines[index + 1].trim().startsWith("|")) {
+          index += 1;
+          tableLines.push(lines[index].trim());
+        }
+
+        const rows = tableLines
+          .filter((tableLine) => !/^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(tableLine))
+          .map((tableLine) => tableLine.split("|").map((cell) => cell.trim()).filter(Boolean));
+
+        rendered.push(
+          <div key={`table-${index}`} className="my-3 overflow-x-auto rounded-lg border border-white/10">
+            <table className="w-full border-collapse text-left text-xs">
+              <tbody>
+                {rows.map((row, rowIndex) => (
+                  <tr key={`${row.join("-")}-${rowIndex}`} className="border-b border-white/10 last:border-b-0">
+                    {row.map((cell, cellIndex) => {
+                      const Cell = rowIndex === 0 ? "th" : "td";
+                      return (
+                        <Cell key={`${cell}-${cellIndex}`} className={`p-2 align-top ${rowIndex === 0 ? "bg-cyan-300/10 font-semibold text-cyan-100" : "text-slate-300"}`}>
+                          {cell}
+                        </Cell>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+        continue;
+      }
+
+      if (/^#{1,4}\s+/.test(trimmed)) {
+        rendered.push(
+          <h4 key={`heading-${index}`} className="mt-4 text-sm font-semibold text-cyan-100 first:mt-0">
+            {trimmed.replace(/^#{1,4}\s+/, "")}
+          </h4>
+        );
+        continue;
+      }
+
+      if (/^(\*|-|•)\s+/.test(trimmed)) {
+        rendered.push(
+          <div key={`bullet-${index}`} className="flex gap-2 text-sm leading-relaxed text-slate-300">
+            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300/70" />
+            <span>{trimmed.replace(/^(\*|-|•)\s+/, "")}</span>
+          </div>
+        );
+        continue;
+      }
+
+      if (/^\d+\.\s+/.test(trimmed)) {
+        const [number] = trimmed.match(/^\d+/) || [""];
+        rendered.push(
+          <div key={`number-${index}`} className="flex gap-2 text-sm leading-relaxed text-slate-300">
+            <span className="shrink-0 text-cyan-300">{number}.</span>
+            <span>{trimmed.replace(/^\d+\.\s+/, "")}</span>
+          </div>
+        );
+        continue;
+      }
+
+      rendered.push(
+        <p key={`paragraph-${index}`} className="text-sm leading-relaxed text-slate-300">
+          {trimmed}
+        </p>
+      );
+    }
+
+    return <div className="space-y-1">{rendered}</div>;
   };
 
   const configuredProviders = [
@@ -367,7 +501,7 @@ export default function PromptOutput({
                 Sandbox
               </p>
               <h2 className="mt-1 text-lg font-semibold text-white">Run the prompt against your models</h2>
-              <p className="mt-1 text-sm text-slate-500">Successful results are saved to the chain buffer automatically.</p>
+              <p className="mt-1 text-sm text-slate-500">After the run, choose which model output should feed the next step.</p>
             </div>
             <button
               type="button"
@@ -435,7 +569,7 @@ export default function PromptOutput({
                       </span>
                     )}
                   </div>
-                  <div className="flex-grow overflow-y-auto pt-3 text-sm leading-relaxed whitespace-pre-wrap text-slate-300">
+                  <div className="flex-grow overflow-y-auto pt-3 text-slate-300">
                     {provider.loading ? (
                       <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-slate-500">
                         <Loader2 className={`h-5 w-5 animate-spin ${provider.id === "gemini" ? "text-sky-300" : provider.id === "openai" ? "text-emerald-300" : "text-amber-300"}`} aria-hidden="true" />
@@ -444,9 +578,29 @@ export default function PromptOutput({
                     ) : provider.error ? (
                       <span className="text-sm text-rose-300">Error: {provider.error}</span>
                     ) : (
-                      provider.output || <span className="text-slate-600">Run the prompt to see this model response.</span>
+                      renderModelOutput(provider.output)
                     )}
                   </div>
+                  {provider.output && !provider.loading && !provider.error && (
+                    <button
+                      type="button"
+                      onClick={() => handleSaveProviderToChain(provider)}
+                      className={`mt-4 rounded-lg border px-3 py-2 text-sm font-semibold transition-all ${
+                        savedChainProvider === provider.id
+                          ? "border-emerald-300/40 bg-emerald-300/15 text-emerald-100"
+                          : "border-cyan-300/30 bg-cyan-300/10 text-cyan-100 hover:bg-cyan-300/20"
+                      }`}
+                    >
+                      <span className="flex items-center justify-center gap-2">
+                        {savedChainProvider === provider.id ? (
+                          <Check className="h-4 w-4" aria-hidden="true" />
+                        ) : (
+                          <Save className="h-4 w-4" aria-hidden="true" />
+                        )}
+                        {savedChainProvider === provider.id ? "Saved to chain" : "Save to chain"}
+                      </span>
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

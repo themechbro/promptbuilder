@@ -13,6 +13,13 @@ export const systemTemplates = {
         required: true
       },
       {
+        id: "chain_context",
+        label: "Upstream Context (Optional)",
+        type: "textarea",
+        placeholder: "Inject output from a previous step here...",
+        required: false
+      },
+      {
         id: "format",
         label: "Summary Style",
         type: "select",
@@ -41,6 +48,9 @@ Condense the source material provided below. Deliver high-signal information tai
 [Source Material]
 {content}
 
+[Upstream Context]
+{chain_context}
+
 [Strategic Briefing Output]:`
   },
 
@@ -56,6 +66,13 @@ Condense the source material provided below. Deliver high-signal information tai
         type: "textarea",
         placeholder: "Paste raw logs, conversation transcripts, invoices, or strings...",
         required: true
+      },
+      {
+        id: "chain_context",
+        label: "Upstream Context (Optional)",
+        type: "textarea",
+        placeholder: "Inject output from a previous step here...",
+        required: false
       },
       {
         id: "fields",
@@ -86,6 +103,9 @@ Scan the incoming source material and isolate only the following targeted tracki
 [Source Unstructured Material]
 {content}
 
+[Upstream Context]
+{chain_context}
+
 [Parsed Output Stream]:`
   },
 
@@ -101,6 +121,13 @@ Scan the incoming source material and isolate only the following targeted tracki
         type: "textarea",
         placeholder: "Paste customer tickets, code bugs, system logs, or text anomalies...",
         required: true
+      },
+      {
+        id: "chain_context",
+        label: "Upstream Context (Optional)",
+        type: "textarea",
+        placeholder: "Inject output from a previous step here...",
+        required: false
       },
       {
         id: "categories",
@@ -128,6 +155,9 @@ Constraint: {reasoning}
 
 [Target Input Text]
 {content}
+
+[Upstream Context]
+{chain_context}
 
 [Triage Router Assignment]:`
   },
@@ -165,6 +195,13 @@ Constraint: {reasoning}
         type: "text",
         placeholder: "e.g., Keep under 150 words, include 3 specific metric markers, use active voice",
         required: false
+      },
+      {
+        id: "chain_context",
+        label: "Upstream Context (Optional)",
+        type: "textarea",
+        placeholder: "Inject output from a previous step here...",
+        required: false
       }
     ],
     prompt_template: `[System Role]
@@ -178,6 +215,9 @@ Construct a professional-grade {content_type} focused on: {topic}.
 2. Additional structural restrictions: {constraints}.
 3. Avoid generic buzzwords (e.g., do not use words like 'revolutionize', 'synergy', or 'delve'). 
 4. Optimize for extreme readability by leveraging bullet layouts, short paragraphs, and bold focal hooks.
+
+[Upstream Context]
+{chain_context}
 
 [Draft Composition Output]:`
   },
@@ -194,6 +234,13 @@ Construct a professional-grade {content_type} focused on: {topic}.
         type: "textarea",
         placeholder: "Paste architecture descriptions, operational plans, codebase segments, or proposals...",
         required: true
+      },
+      {
+        id: "chain_context",
+        label: "Upstream Context (Optional)",
+        type: "textarea",
+        placeholder: "Inject output from a previous step here...",
+        required: false
       },
       {
         id: "focus",
@@ -224,6 +271,9 @@ Deliver the results formatted as a comprehensive {output_format}. Ensure every o
 
 [Source Material Under Audit]
 {content}
+
+[Upstream Context]
+{chain_context}
 
 [Diagnostic Assessment Output Report]:`
   }
