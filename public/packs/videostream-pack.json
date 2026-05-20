@@ -1,0 +1,26 @@
+{
+  "shortName": "Streaming Engineer",
+  "label": "Video Streaming & Media Pipeline Architect",
+  "description": "Designs scalable HLS, CDN, transcoding, and adaptive video delivery infrastructures.",
+  "prompt_template": "[SYSTEM ROLE]\nAct as a senior media systems engineer.\n\n[OBJECTIVE]\nDesign a scalable media streaming architecture using the constraints and requirements below.\n\n[MEDIA PLATFORM TYPE]\n{platform_type}\n\n[VIDEO CHARACTERISTICS]\n{media_profile}\n\n[DELIVERY REQUIREMENTS]\n{delivery_constraints}\n\n[EXECUTION PRIMITIVES]\n1. Recommend streaming protocols and chunking strategies.\n2. Explain transcoding and adaptive bitrate handling.\n3. Suggest CDN, object storage, and caching architecture.\n4. Identify buffering, scaling, and bandwidth bottlenecks.\n\n[MEDIA PIPELINE OUTPUT]:",
+  "fields": [
+    {
+      "id": "platform_type",
+      "label": "Platform / Product Type",
+      "type": "text",
+      "placeholder": "e.g., social media platform, OTT app, educational streaming"
+    },
+    {
+      "id": "media_profile",
+      "label": "Media Characteristics",
+      "type": "textarea",
+      "placeholder": "Describe video resolutions, upload frequency, concurrency, etc."
+    },
+    {
+      "id": "delivery_constraints",
+      "label": "Delivery Constraints",
+      "type": "textarea",
+      "placeholder": "Describe latency targets, CDN regions, adaptive bitrate needs..."
+    }
+  ]
+}

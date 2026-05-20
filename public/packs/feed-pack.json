@@ -1,0 +1,26 @@
+{
+  "shortName": "Feed Optimizer",
+  "label": "Social Feed Ranking & Fanout Architect",
+  "description": "Builds scalable feed generation strategies for social platforms using fanout, ranking, and caching pipelines.",
+  "prompt_template": "[SYSTEM ROLE]\nAct as a staff-level backend architect specializing in social feed infrastructure.\n\n[OBJECTIVE]\nDesign a scalable feed delivery architecture based on the product requirements below.\n\n[PLATFORM TYPE]\n{platform_type}\n\n[USER SCALE]\n{scale_requirements}\n\n[ENGAGEMENT SIGNALS]\n{ranking_signals}\n\n[EXECUTION PRIMITIVES]\n1. Recommend fanout-on-write or fanout-on-read strategies.\n2. Suggest ranking approaches using engagement, recency, or affinity.\n3. Outline Redis, database, and async queue usage.\n4. Identify bottlenecks, hot-key problems, and scaling risks.\n\n[FEED SYSTEM OUTPUT]:",
+  "fields": [
+    {
+      "id": "platform_type",
+      "label": "Platform Type",
+      "type": "text",
+      "placeholder": "e.g., LinkedIn-style network, creator platform, discussion forum"
+    },
+    {
+      "id": "scale_requirements",
+      "label": "Scale Requirements",
+      "type": "textarea",
+      "placeholder": "Describe DAUs, expected post volume, follower counts, etc."
+    },
+    {
+      "id": "ranking_signals",
+      "label": "Ranking / Recommendation Signals",
+      "type": "textarea",
+      "placeholder": "Describe likes, comments, affinity scores, watch time, etc."
+    }
+  ]
+}
