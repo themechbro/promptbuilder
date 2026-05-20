@@ -89,7 +89,8 @@ export default function Workspace() {
   }, []);
 
   const currentTemplate = templatesRegistry[activeCategory] || templatesRegistry.summarize || Object.values(templatesRegistry)[0];
-  const chainTargetField = currentTemplate?.fields?.find((field) => field.id === "content")
+  const chainTargetField = currentTemplate?.fields?.find((field) => field.id === "chain_context")
+    || currentTemplate?.fields?.find((field) => field.id === "content")
     || currentTemplate?.fields?.find((field) => field.type === "textarea")
     || currentTemplate?.fields?.find((field) => /content|source|material|input|text|topic/i.test(`${field.id} ${field.label}`))
     || currentTemplate?.fields?.find((field) => field.required)

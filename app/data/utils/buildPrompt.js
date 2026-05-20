@@ -25,6 +25,7 @@ export function buildPrompt(templateString, formValues = {}) {
     // Fix specific inline template remnants
     .replace(/for a \s+audience\./gi, ".")
     .replace(/for \s+as/gi, "as")
+    .replace(/\n?\[Upstream Context\]\s*(?=\n\[[^\]]+\]|$)/g, "")
     
     // Target any structured constraint line that remains completely unpopulated, 
     // even if it has a trailing space, dot, colon, or list index format.

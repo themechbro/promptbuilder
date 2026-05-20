@@ -22,7 +22,19 @@ const defaultField = {
   label: "Source Material",
   type: "textarea",
   placeholder: "Paste the main input for this workflow...",
+  required: true,
 };
+
+const defaultFields = [
+  defaultField,
+  {
+    id: "chain_context",
+    label: "Upstream Context",
+    type: "textarea",
+    placeholder: "Optional output from a previous step...",
+    required: false,
+  },
+];
 
 export default function TemplateForge({ onTemplatesUpdated }) {
   const [shortName, setShortName] = useState("");
@@ -31,7 +43,7 @@ export default function TemplateForge({ onTemplatesUpdated }) {
   const [promptTemplate, setPromptTemplate] = useState("");
   const [systemRole, setSystemRole] = useState("Act as an expert in...");
   const [objective, setObjective] = useState("Your task is to...");
-  const [fields, setFields] = useState([defaultField]);
+  const [fields, setFields] = useState(defaultFields);
 
   const [customRegistry, setCustomRegistry] = useState({});
   const [importError, setImportError] = useState("");
@@ -116,7 +128,7 @@ ${dynamicVariableBlocks}
     setShortName("");
     setLabel("");
     setDescription("");
-    setFields([defaultField]);
+    setFields(defaultFields);
     setSystemRole("Act as an expert in...");
     setObjective("Your task is to...");
   };
