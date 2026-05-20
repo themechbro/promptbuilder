@@ -1,98 +1,105 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import {
+  Bot,
+  Boxes,
+  BriefcaseBusiness,
+  Check,
+  Code2,
+  Database,
+  Download,
+  Eye,
+  Film,
+  LayoutGrid,
+  Megaphone,
+  Network,
+  PackagePlus,
+  Users,
+  X,
+} from "lucide-react";
 
-// Hardcoded metadata catalog pointing to your public folder assets
 const PACK_CATALOG = [
   {
     id: "dev_pack",
-    icon: "💻",
+    icon: Code2,
     title: "Developer Pack",
     label: "API Designer & Code Architect",
-    description: "Compiles strict protocol contracts and endpoint payload definitions with clear rate-limiting strategies.",
-    path: "/packs/developer-pack.json"
+    description: "Compile API contracts, endpoint payloads, and implementation notes with clearer technical constraints.",
+    path: "/packs/developer-pack.json",
   },
   {
     id: "hr_pack",
-    icon: "👥",
+    icon: Users,
     title: "HR & Ops Pack",
     label: "Technical Talent Aligner",
-    description: "Generates hyper-tailored outreach loops and technical test criteria for specialized engineering candidates.",
-    path: "/packs/hr-pack.json"
+    description: "Create candidate outreach, interview criteria, and role-fit analysis for technical hiring workflows.",
+    path: "/packs/hr-pack.json",
   },
   {
     id: "creator_pack",
-    icon: "🎥",
+    icon: Film,
     title: "Creator Pack",
     label: "Content Strategist",
-    description: "Optimizes high-signal content matrices, tracking metadata, and titles focusing on premium rail networks.",
-    path: "/packs/creator-pack.json"
-  }, 
+    description: "Shape titles, outlines, metadata, and content plans for repeatable publishing workflows.",
+    path: "/packs/creator-pack.json",
+  },
   {
     id: "pm_pack",
-    icon: "📊",
+    icon: LayoutGrid,
     title: "Product Manager Pack",
     label: "Agile Spec Generator",
-    description: "Transforms rough feature ideas into strict Agile user stories with Given/When/Then acceptance criteria.",
-    path: "/packs/pm-pack.json"
+    description: "Turn rough product ideas into user stories, acceptance criteria, and release-ready specs.",
+    path: "/packs/pm-pack.json",
   },
   {
     id: "marketing_pack",
-    icon: "📈",
+    icon: Megaphone,
     title: "Marketing Pack",
     label: "SEO & Growth Outline",
-    description: "Generates highly optimized SEO titles, meta descriptions, and structural blog outlines.",
-    path: "/packs/marketing-pack.json"
+    description: "Generate SEO titles, meta descriptions, blog outlines, and campaign structure quickly.",
+    path: "/packs/marketing-pack.json",
   },
   {
     id: "redisstrategist_pack",
-    icon: "🗄️",
+    icon: Database,
     title: "Redis Strategist Pack",
-    label: "Distributed Cache & Redis Topology Planner",
-    description: "Designs scalable Redis caching architectures, invalidation strategies, and distributed data access patterns.",
-    path: "/packs/redis-pack.json"
+    label: "Distributed Cache Planner",
+    description: "Design Redis caching architectures, invalidation plans, and data access patterns.",
+    path: "/packs/redis-pack.json",
   },
   {
     id: "feed_pack",
-    icon: "💻📝",
+    icon: Network,
     title: "Feed Optimizer Pack",
-    label: "Social Feed Ranking & Fanout Architect",
-    description: "Builds scalable feed generation strategies for social platforms using fanout, ranking, and caching pipelines.",
-    path: "/packs/feed-pack.json"
+    label: "Social Feed Architect",
+    description: "Plan ranking, fanout, caching, and feed generation strategies for social products.",
+    path: "/packs/feed-pack.json",
   },
-  {
-    id: "feed_pack",
-    icon: "💻📝",
-    title: "Feed Optimizer Pack",
-    label: "Social Feed Ranking & Fanout Architect",
-    description: "Builds scalable feed generation strategies for social platforms using fanout, ranking, and caching pipelines.",
-    path: "/packs/feed-pack.json"
-  },
-  ,
   {
     id: "videostream_pack",
-    icon: "▶️",
+    icon: Film,
     title: "Streaming Engineer Pack",
-    label: "Video Streaming & Media Pipeline Architect",
-    description: "Designs scalable HLS, CDN, transcoding, and adaptive video delivery infrastructures.",
-    path: "/packs/videostream-pack.json"
+    label: "Media Pipeline Architect",
+    description: "Design HLS, CDN, transcoding, and adaptive delivery systems for video products.",
+    path: "/packs/videostream-pack.json",
   },
   {
     id: "interview_pack",
-    icon: "🗣️🤝✅",
+    icon: BriefcaseBusiness,
     title: "Interview Forge Pack",
-    label: "System Design Interview Simulator",
-    description: "Generates production-grade system design interview discussions, tradeoffs, and architecture evaluations.",
-    path: "/packs/interview-pack.json"
+    label: "System Design Simulator",
+    description: "Generate system design interview prompts, tradeoffs, and evaluation rubrics.",
+    path: "/packs/interview-pack.json",
   },
   {
     id: "ai_pack",
-    icon: "🤖🔗⚙️",
+    icon: Bot,
     title: "AI Workflow Pack",
-    label: "LLM Pipeline & Agent Orchestration Designer",
-    description: "Designs structured AI workflows, prompt chains, evaluation pipelines, and agent execution systems.",
-    path: "/packs/aiworkflow-pack.json"
-  }
+    label: "LLM Pipeline Designer",
+    description: "Design prompt chains, agent flows, evaluation plans, and structured AI workflows.",
+    path: "/packs/aiworkflow-pack.json",
+  },
 ];
 
 export default function CommunityHub({ onTemplatesUpdated }) {
@@ -101,15 +108,18 @@ export default function CommunityHub({ onTemplatesUpdated }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Check which templates are already installed in localStorage
   const refreshInstalledStatus = () => {
     const saved = localStorage.getItem("prompt_builder_custom_templates");
-    if (saved) {
-      try {
-        setInstalledPacks(JSON.parse(saved));
-      } catch (e) {
-        console.error(e);
-      }
+    if (!saved) {
+      setInstalledPacks({});
+      return;
+    }
+
+    try {
+      setInstalledPacks(JSON.parse(saved));
+    } catch (error) {
+      console.error(error);
+      setInstalledPacks({});
     }
   };
 
@@ -127,7 +137,7 @@ export default function CommunityHub({ onTemplatesUpdated }) {
       setSelectedPackData({ ...data, _meta: packMeta });
       setIsModalOpen(true);
     } catch (error) {
-      alert("Error loading template pack. Ensure the JSON file exists in public/packs/.");
+      alert("Could not load this template pack. Check that the JSON file exists in public/packs.");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -136,134 +146,158 @@ export default function CommunityHub({ onTemplatesUpdated }) {
 
   const handleInstallPack = (packData) => {
     const templateId = `custom_${packData.shortName.toLowerCase().replace(/\s+/g, "_")}`;
-    
     const targetPayload = {
       ...packData,
       id: templateId,
-      isCustom: true // Flags it with the amber badge in the studio
+      isCustom: true,
     };
 
     const existingCustom = JSON.parse(localStorage.getItem("prompt_builder_custom_templates") || "{}");
     const updatedCustom = { ...existingCustom, [templateId]: targetPayload };
-
     localStorage.setItem("prompt_builder_custom_templates", JSON.stringify(updatedCustom));
-    
+
     refreshInstalledStatus();
     setIsModalOpen(false);
-    
-    alert(`Success: [${packData.label}] installed to your workspace!`);
+    alert(`Installed "${packData.label}" to your workspace.`);
     if (onTemplatesUpdated) onTemplatesUpdated();
   };
 
   return (
-    <div className="w-full space-y-6 animate-fadeIn relative">
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl">
-        <div className="mb-6">
-          <h2 className="text-lg font-bold text-slate-200 flex items-center gap-2">
-            <span>📦</span> Community Template Hub
-          </h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Browse and install pre-configured structural layouts. Installed packs will merge seamlessly with your own forged templates.
-          </p>
+    <div className="w-full space-y-5">
+      <section className="rounded-xl border border-white/10 bg-white/[0.035] p-5 shadow-xl shadow-black/10">
+        <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+          <div>
+            <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-cyan-300">
+              <Boxes className="h-3.5 w-3.5" aria-hidden="true" />
+              Community hub
+            </p>
+            <h2 className="mt-1 text-xl font-semibold text-white">Install ready-made workflows</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-500">
+              Browse curated packs, preview the fields and prompt structure, then add useful templates to your Build tab.
+            </p>
+          </div>
+          <div className="rounded-lg border border-white/10 bg-[#0f172a]/70 px-3 py-2 text-xs text-slate-400">
+            {Object.keys(installedPacks).length} installed
+          </div>
         </div>
 
-        {/* Marketplace Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {PACK_CATALOG.map((pack) => {
-            // Check if this pack's shortName exists in the installed registry
+            const Icon = pack.icon;
             const isInstalled = Object.values(installedPacks).some(
-              (installed) => installed.shortName?.toLowerCase() === pack.title.toLowerCase() || installed.label?.toLowerCase() === pack.label.toLowerCase()
+              (installed) => installed.shortName?.toLowerCase() === pack.title.toLowerCase()
+                || installed.label?.toLowerCase() === pack.label.toLowerCase()
             );
 
             return (
-              <div key={pack.id} className="bg-slate-950 border border-slate-800 p-5 rounded-xl flex flex-col justify-between hover:border-indigo-500/50 transition-all group">
+              <article
+                key={pack.id}
+                className="flex min-h-64 flex-col justify-between rounded-xl border border-white/10 bg-[#0f172a]/70 p-5 transition-all hover:border-cyan-300/30 hover:bg-[#111c33]"
+              >
                 <div>
-                  <div className="flex justify-between items-start mb-3">
-                    <span className="text-3xl bg-slate-900 p-3 rounded-lg border border-slate-800">{pack.icon}</span>
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-cyan-300/20 bg-cyan-300/10 text-cyan-200">
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </div>
                     {isInstalled && (
-                      <span className="text-[10px] font-mono bg-emerald-950/40 text-emerald-400 border border-emerald-900/60 px-2 py-1 rounded font-bold uppercase tracking-wide">
-                        ✓ Installed
+                      <span className="inline-flex items-center gap-1 rounded-md border border-emerald-300/20 bg-emerald-300/10 px-2 py-1 text-[11px] font-semibold text-emerald-200">
+                        <Check className="h-3 w-3" aria-hidden="true" />
+                        Installed
                       </span>
                     )}
                   </div>
-                  <h3 className="text-sm font-bold text-slate-200">{pack.title}</h3>
-                  <p className="text-[11px] text-indigo-400 font-mono mb-2">{pack.label}</p>
-                  <p className="text-xs text-slate-400 line-clamp-3">{pack.description}</p>
+                  <h3 className="text-base font-semibold text-white">{pack.title}</h3>
+                  <p className="mt-1 text-xs font-medium text-cyan-300">{pack.label}</p>
+                  <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-slate-500">{pack.description}</p>
                 </div>
-                
+
                 <button
                   type="button"
                   disabled={isLoading}
                   onClick={() => handlePreviewPack(pack)}
-                  className="mt-5 w-full bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs font-mono font-bold py-2 rounded-lg transition-colors"
+                  className="mt-5 rounded-lg border border-white/10 bg-[#0b1020] px-3 py-2 text-sm font-semibold text-slate-300 transition-all hover:border-cyan-300/30 hover:text-cyan-100 disabled:cursor-wait disabled:text-slate-600"
                 >
-                  Inspect Blueprint
+                  <span className="flex items-center justify-center gap-2">
+                    <Eye className="h-4 w-4" aria-hidden="true" />
+                    Preview pack
+                  </span>
                 </button>
-              </div>
+              </article>
             );
           })}
         </div>
-      </div>
+      </section>
 
-      {/* Modal Overlay */}
       {isModalOpen && selectedPackData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-            
-            {/* Modal Header */}
-            <div className="flex justify-between items-center p-5 border-b border-slate-800 bg-slate-950/50">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{selectedPackData._meta.icon}</span>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-200 font-mono uppercase">{selectedPackData.shortName}</h3>
-                  <p className="text-xs text-slate-400">{selectedPackData.label}</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b1020]/85 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a] shadow-2xl">
+            <div className="flex items-center justify-between gap-4 border-b border-white/10 bg-[#0b1020]/60 p-5">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-cyan-300/20 bg-cyan-300/10 text-cyan-200">
+                  <selectedPackData._meta.icon className="h-5 w-5" aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="truncate text-base font-semibold text-white">{selectedPackData.shortName}</h3>
+                  <p className="truncate text-sm text-slate-500">{selectedPackData.label}</p>
                 </div>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-500 hover:text-rose-400 font-bold text-lg p-2 transition-colors">
-                ✕
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="rounded-lg border border-white/10 bg-white/[0.03] p-2 text-slate-500 transition-all hover:border-rose-300/30 hover:text-rose-200"
+                aria-label="Close preview"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
 
-            {/* Modal Scrollable Body */}
-            <div className="p-6 overflow-y-auto space-y-6">
-              <div>
-                <h4 className="text-[10px] uppercase font-mono text-slate-500 mb-1.5 font-bold tracking-wider">Blueprint Description</h4>
-                <p className="text-sm text-slate-300 leading-relaxed">{selectedPackData.description}</p>
+            <div className="space-y-5 overflow-y-auto p-5">
+              <div className="rounded-xl border border-white/10 bg-[#0b1020]/60 p-4">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">What this pack does</h4>
+                <p className="mt-2 text-sm leading-relaxed text-slate-300">{selectedPackData.description}</p>
               </div>
 
               <div>
-                <h4 className="text-[10px] uppercase font-mono text-slate-500 mb-1.5 font-bold tracking-wider">Dynamic Variables ({selectedPackData.fields.length})</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  {selectedPackData.fields.map(f => (
-                    <div key={f.id} className="bg-slate-950 border border-slate-800 p-2.5 rounded-lg">
-                      <code className="text-[10px] text-amber-400 font-bold block mb-1">{"{" + f.id + "}"}</code>
-                      <span className="text-xs text-slate-400">{f.label}</span>
+                <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Form fields ({selectedPackData.fields.length})
+                </h4>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {selectedPackData.fields.map((field) => (
+                    <div key={field.id} className="rounded-lg border border-white/10 bg-[#0b1020]/60 p-3">
+                      <code className="mb-1 block text-xs font-semibold text-amber-200">{"{" + field.id + "}"}</code>
+                      <span className="text-sm text-slate-400">{field.label}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               <div>
-                <h4 className="text-[10px] uppercase font-mono text-slate-500 mb-1.5 font-bold tracking-wider">Raw Prompt Structure</h4>
-                <pre className="bg-slate-950 border border-slate-800 p-4 rounded-lg text-[10px] font-mono text-emerald-400 whitespace-pre-wrap overflow-x-auto leading-loose">
+                <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Prompt preview</h4>
+                <pre className="max-h-72 overflow-auto rounded-xl border border-white/10 bg-[#0b1020] p-4 text-xs leading-relaxed whitespace-pre-wrap text-emerald-200">
                   {selectedPackData.prompt_template}
                 </pre>
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="p-5 border-t border-slate-800 bg-slate-950/50 flex justify-end gap-3">
-              <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-xs font-mono text-slate-400 hover:text-slate-200 transition-colors">
+            <div className="flex justify-end gap-3 border-t border-white/10 bg-[#0b1020]/60 p-5">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-semibold text-slate-400 transition-all hover:border-white/20 hover:text-white"
+              >
                 Cancel
               </button>
-              <button 
+              <button
+                type="button"
                 onClick={() => handleInstallPack(selectedPackData)}
-                className="px-6 py-2 text-xs font-mono font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-lg transition-colors flex items-center gap-2"
+                className="rounded-lg border border-cyan-300/40 bg-cyan-300/15 px-4 py-2 text-sm font-semibold text-cyan-100 transition-all hover:bg-cyan-300/25"
               >
-                📥 Install to Workspace
+                <span className="flex items-center gap-2">
+                  <Download className="h-4 w-4" aria-hidden="true" />
+                  Install to workspace
+                </span>
               </button>
             </div>
-
           </div>
         </div>
       )}

@@ -1,6 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Download,
+  FileJson,
+  FileUp,
+  Hammer,
+  Info,
+  Plus,
+  RefreshCcw,
+  Save,
+  Trash2,
+  Type,
+  Wrench,
+} from "lucide-react";
+
+const defaultField = {
+  id: "content",
+  label: "Source Material",
+  type: "textarea",
+  placeholder: "Paste the main input for this workflow...",
+};
 
 export default function TemplateForge({ onTemplatesUpdated }) {
   const [shortName, setShortName] = useState("");
@@ -8,21 +30,24 @@ export default function TemplateForge({ onTemplatesUpdated }) {
   const [description, setDescription] = useState("");
   const [promptTemplate, setPromptTemplate] = useState("");
   const [systemRole, setSystemRole] = useState("Act as an expert in...");
-const [objective, setObjective] = useState("Your task is to...");
-  const [fields, setFields] = useState([
-    { id: "content", label: "Source Material", type: "textarea", placeholder: "Default input content area..." }
-  ]);
+  const [objective, setObjective] = useState("Your task is to...");
+  const [fields, setFields] = useState([defaultField]);
 
   const [customRegistry, setCustomRegistry] = useState({});
   const [importError, setImportError] = useState("");
   const [importSuccess, setImportSuccess] = useState(false);
 
-  // Load custom templates locally to show dynamic eviction logs
   const loadActiveCustoms = () => {
     const saved = localStorage.getItem("prompt_builder_custom_templates");
-    if (saved) {
-      try { setCustomRegistry(JSON.parse(saved)); } catch (e) { console.error(e); }
-    } else {
+    if (!saved) {
+      setCustomRegistry({});
+      return;
+    }
+
+    try {
+      setCustomRegistry(JSON.parse(saved));
+    } catch (error) {
+      console.error(error);
       setCustomRegistry({});
     }
   };
@@ -32,21 +57,18 @@ const [objective, setObjective] = useState("Your task is to...");
     loadActiveCustoms();
   }, []);
 
-  // ==========================================
-  // FIXED V1.2.1: DETERMINISTIC LIVE AUTO-COMPILER
-  // ==========================================
-useEffect(() => {
-  const dynamicVariableBlocks = fields
-    .filter(f => f.id && f.id.trim() !== "")
-    .map(f => {
-      const blockHeader = (f.label && f.label.trim() !== "")
-        ? f.label.toUpperCase()
-        : f.id.toUpperCase();
-      return `[${blockHeader}]\n{${f.id}}`;
-    })
-    .join("\n\n");
+  useEffect(() => {
+    const dynamicVariableBlocks = fields
+      .filter((field) => field.id && field.id.trim() !== "")
+      .map((field) => {
+        const blockHeader = field.label && field.label.trim() !== ""
+          ? field.label.toUpperCase()
+          : field.id.toUpperCase();
+        return `[${blockHeader}]\n{${field.id}}`;
+      })
+      .join("\n\n");
 
-  const compiled = `[SYSTEM ROLE]
+    const compiled = `[SYSTEM ROLE]
 ${systemRole}
 
 [OBJECTIVE]
@@ -56,74 +78,82 @@ ${dynamicVariableBlocks}
 
 [OUTPUT]:`;
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  setPromptTemplate(compiled);
-}, [fields, systemRole, objective]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPromptTemplate(compiled);
+  }, [fields, systemRole, objective]);
 
   const handleAddField = () => {
     const uniqueId = `var_${crypto.randomUUID().split("-")[0]}`;
-    setFields(prev => [...prev, { id: uniqueId, label: "Custom Parameter Field", type: "text", placeholder: "Enter user variables value..." }]);
+    setFields((prev) => [
+      ...prev,
+      {
+        id: uniqueId,
+        label: "Custom input",
+        type: "text",
+        placeholder: "What should the user enter here?",
+      },
+    ]);
   };
 
-  const handleUpdateField = (index, key, val) => {
-    let finalizedVal = val;
-    if (key === "id") {
-      // Enforce strict lowercase prompt token variable formatting rules safely
-      finalizedVal = val.toLowerCase().replace(/[^a-z0-9_]/g, "");
-    }
-    setFields(prev => {
+  const handleUpdateField = (index, key, value) => {
+    const finalizedValue = key === "id"
+      ? value.toLowerCase().replace(/[^a-z0-9_]/g, "")
+      : value;
+
+    setFields((prev) => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [key]: finalizedVal };
+      updated[index] = { ...updated[index], [key]: finalizedValue };
       return updated;
     });
   };
 
   const handleRemoveField = (index) => {
     if (fields.length === 1) return;
-    setFields(prev => prev.filter((_, idx) => idx !== index));
+    setFields((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const resetForge = () => {
+    setShortName("");
+    setLabel("");
+    setDescription("");
+    setFields([defaultField]);
+    setSystemRole("Act as an expert in...");
+    setObjective("Your task is to...");
   };
 
   const handleCompileAndSave = () => {
-    if (!shortName || !label) {
-      alert("Missing core identifying attributes: Short Tab Name and Full Engine Label are required.");
+    if (!shortName.trim() || !label.trim()) {
+      alert("Please add a short name and a full workflow title before saving.");
       return;
     }
 
     const sanitizedShortName = shortName.trim();
     const templateId = `custom_${sanitizedShortName.toLowerCase().replace(/\s+/g, "_")}`;
-    
+
     const targetCustomPayload = {
-    id: templateId,
-    isCustom: true,
-    shortName: sanitizedShortName,
-    label: label.trim(),
-    description: description.trim(),
-    systemRole: systemRole.trim(),  // add this
-    objective: objective.trim(),    // add this
-    prompt_template: promptTemplate,
-    fields: fields.map(f => ({ ...f, id: f.id.trim() }))
-};
+      id: templateId,
+      isCustom: true,
+      shortName: sanitizedShortName,
+      label: label.trim(),
+      description: description.trim(),
+      systemRole: systemRole.trim(),
+      objective: objective.trim(),
+      prompt_template: promptTemplate,
+      fields: fields.map((field) => ({ ...field, id: field.id.trim() })),
+    };
 
     const existingCustom = JSON.parse(localStorage.getItem("prompt_builder_custom_templates") || "{}");
     const updatedCustom = { ...existingCustom, [templateId]: targetCustomPayload };
 
     localStorage.setItem("prompt_builder_custom_templates", JSON.stringify(updatedCustom));
-    
-    // Clear form layout metadata parameters smoothly after commit
-    setShortName("");
-    setLabel("");
-    setDescription("");
-    setFields([{ id: "content", label: "Source Material", type: "textarea", placeholder: "Default input content area..." }]);
-    setSystemRole("Act as an expert in...");
-    setObjective("Your task is to...");
-    
+    resetForge();
     loadActiveCustoms();
-    alert(`Success: [${targetCustomPayload.label}] has been compiled and activated into your workspace layout tab configuration.`);
+    alert(`Saved "${targetCustomPayload.label}" to your workspace.`);
     if (onTemplatesUpdated) onTemplatesUpdated();
   };
 
   const handleDeleteCustomTemplate = (templateId) => {
-    if (!confirm("Are you sure you want to permanently delete this custom template configuration from your workspace cache?")) return;
+    if (!confirm("Delete this custom template from your workspace?")) return;
 
     const existingCustom = JSON.parse(localStorage.getItem("prompt_builder_custom_templates") || "{}");
     delete existingCustom[templateId];
@@ -135,17 +165,16 @@ ${dynamicVariableBlocks}
     }
 
     loadActiveCustoms();
-    alert("Template successfully removed from system disk configurations registry.");
     if (onTemplatesUpdated) onTemplatesUpdated();
   };
 
   const handleExportTemplate = () => {
     const exportPayload = {
-      shortName: shortName || "Custom Template Spec",
-      label: label || "User Contributed Module Blueprint",
+      shortName: shortName || "Custom Template",
+      label: label || "User Workflow",
       description,
       prompt_template: promptTemplate,
-      fields
+      fields,
     };
     const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -157,200 +186,370 @@ ${dynamicVariableBlocks}
     document.body.removeChild(link);
   };
 
-  const handleImportTemplate = (e) => {
+  const handleImportTemplate = (event) => {
     setImportError("");
     setImportSuccess(false);
-    const file = e.target.files[0];
+    const file = event.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = (readerEvent) => {
       try {
-        const parsed = JSON.parse(event.target.result);
+        const parsed = JSON.parse(readerEvent.target.result);
         if (!parsed.shortName || !parsed.label || !parsed.prompt_template || !parsed.fields) {
-          throw new Error("Invalid schema blueprint configuration elements missing core layout fields structures mapping metrics.");
+          throw new Error("This JSON is missing shortName, label, prompt_template, or fields.");
         }
 
         const templateId = `custom_${parsed.shortName.toLowerCase().replace(/\s+/g, "_")}`;
         const existingCustom = JSON.parse(localStorage.getItem("prompt_builder_custom_templates") || "{}");
-        
+
         existingCustom[templateId] = { ...parsed, id: templateId, isCustom: true };
 
         localStorage.setItem("prompt_builder_custom_templates", JSON.stringify(existingCustom));
         setImportSuccess(true);
         loadActiveCustoms();
         if (onTemplatesUpdated) onTemplatesUpdated();
-      } catch (err) {
-        setImportError(err.message);
+      } catch (error) {
+        setImportError(error.message);
       }
     };
     reader.readAsText(file);
+    event.target.value = "";
   };
 
   return (
-    <div className="space-y-8 w-full animate-fadeIn">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full">
-        
-        {/* Configuration Metadata Form Pane */}
-        <div className="lg:col-span-6 bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl space-y-5 w-full">
-          <div>
-            <h3 className="text-sm font-bold font-mono text-amber-400 uppercase tracking-wider">🔨 Schema Authoring Canvas</h3>
-            <p className="text-xs text-slate-400 mt-1">Design unlimited delimiter-enforced prompt blocks with dynamic variables</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-[10px] font-mono font-bold text-slate-400 uppercase block">Short Tab Name *</label>
-              <input type="text" value={shortName} onChange={(e) => setShortName(e.target.value)} placeholder="e.g., QA Pack" className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded text-xs text-slate-300 font-mono focus:outline-none focus:border-amber-500" />
+    <div className="w-full space-y-5">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+        <section className="space-y-5 lg:col-span-6">
+          <div className="rounded-xl border border-white/10 bg-white/[0.035] p-5 shadow-xl shadow-black/10">
+            <div className="mb-5">
+              <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-cyan-300">
+                <Hammer className="h-3.5 w-3.5" aria-hidden="true" />
+                Create custom
+              </p>
+              <h2 className="mt-1 text-xl font-semibold text-white">Build your own workflow template</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-500">
+                Define the name, role, objective, and input fields. The prompt preview updates automatically as you edit.
+              </p>
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-mono font-bold text-slate-400 uppercase block">Full Engine Label *</label>
-              <input type="text" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g., Automated Integration Compiler" className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded text-xs text-slate-300 focus:outline-none focus:border-amber-500" />
-            </div>
-          </div>
 
-          <div className="space-y-1">
-            <label className="text-[10px] font-mono font-bold text-slate-400 uppercase block">Operational Description</label>
-            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Explain the high-signal transformation target metrics..." className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded text-xs text-slate-300 focus:outline-none focus:border-amber-500" />
-          </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FieldShell
+                  label="Short name"
+                  helper="This appears on the workflow card. Keep it brief, like QA Review or Blog SEO."
+                  required
+                >
+                  <input
+                    type="text"
+                    value={shortName}
+                    onChange={(event) => setShortName(event.target.value)}
+                    placeholder="e.g., QA Review"
+                    className="w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 py-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-300/60"
+                  />
+                </FieldShell>
 
-<div className="space-y-1">
-  <label className="text-[10px] font-mono font-bold text-slate-400 uppercase block">
-    System Role *
-  </label>
-  <textarea
-    rows={2}
-    value={systemRole}
-    onChange={(e) => setSystemRole(e.target.value)}
-    placeholder="e.g., Act as a senior code reviewer specializing in security vulnerabilities..."
-    className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded text-xs text-slate-300 font-mono focus:outline-none focus:border-amber-500"
-  />
-</div>
-
-<div className="space-y-1">
-  <label className="text-[10px] font-mono font-bold text-slate-400 uppercase block">
-    Objective *
-  </label>
-  <textarea
-    rows={2}
-    value={objective}
-    onChange={(e) => setObjective(e.target.value)}
-    placeholder="e.g., Analyze the code below and identify all potential security risks..."
-    className="w-full bg-slate-950 border border-slate-800 px-3 py-2 rounded text-xs text-slate-300 font-mono focus:outline-none focus:border-amber-500"
-  />
-</div>
-
-          {/* Dynamic Variable Rows Block */}
-          <div className="space-y-3 border-t border-slate-800 pt-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <h4 className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wide">Form Field Variables Layer</h4>
-                <p className="text-[10px] text-slate-500 font-sans mt-0.5">Define variable schemas on the fly to drive live compilation matrix blocks</p>
+                <FieldShell
+                  label="Workflow title"
+                  helper="A clear title for what this template produces."
+                  required
+                >
+                  <input
+                    type="text"
+                    value={label}
+                    onChange={(event) => setLabel(event.target.value)}
+                    placeholder="e.g., Security Review Assistant"
+                    className="w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 py-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-300/60"
+                  />
+                </FieldShell>
               </div>
-              <button type="button" onClick={handleAddField} className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-1 rounded hover:bg-amber-500 hover:text-slate-950 transition-all font-mono font-bold">[+] Add Variable</button>
+
+              <FieldShell
+                label="Description"
+                helper="Explain when someone should use this workflow. This shows below the title."
+              >
+                <input
+                  type="text"
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="e.g., Reviews source code and lists security risks with fixes."
+                  className="w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 py-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-300/60"
+                />
+              </FieldShell>
+
+              <FieldShell
+                label="System role"
+                helper="Tell the model what expert role to play. Be specific about domain and behavior."
+                required
+              >
+                <textarea
+                  rows={3}
+                  value={systemRole}
+                  onChange={(event) => setSystemRole(event.target.value)}
+                  placeholder="e.g., Act as a senior security engineer reviewing production code."
+                  className="w-full resize-y rounded-lg border border-white/10 bg-[#0b1020] px-3 py-3 text-sm leading-relaxed text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-300/60"
+                />
+              </FieldShell>
+
+              <FieldShell
+                label="Objective"
+                helper="Describe the task the model should complete every time this workflow runs."
+                required
+              >
+                <textarea
+                  rows={3}
+                  value={objective}
+                  onChange={(event) => setObjective(event.target.value)}
+                  placeholder="e.g., Identify security risks, explain impact, and recommend fixes."
+                  className="w-full resize-y rounded-lg border border-white/10 bg-[#0b1020] px-3 py-3 text-sm leading-relaxed text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-300/60"
+                />
+              </FieldShell>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-white/[0.035] p-5 shadow-xl shadow-black/10">
+            <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+              <div>
+                <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-cyan-300">
+                  <Wrench className="h-3.5 w-3.5" aria-hidden="true" />
+                  Input fields
+                </p>
+                <h3 className="mt-1 text-base font-semibold text-white">What should the user fill in?</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Each field becomes a variable in your prompt, such as {"{content}"} or {"{audience}"}.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddField}
+                className="rounded-lg border border-cyan-300/40 bg-cyan-300/15 px-3 py-2 text-sm font-semibold text-cyan-100 transition-all hover:bg-cyan-300/25"
+              >
+                <span className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Add field
+                </span>
+              </button>
             </div>
 
-            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-              {fields.map((field, idx) => (
-                <div key={idx} className="bg-slate-950 border border-slate-850 p-3 rounded-lg grid grid-cols-12 gap-2 items-center relative group">
-                  <div className="col-span-4 space-y-0.5">
-                    <span className="text-[9px] font-mono font-bold text-slate-500 block">TOKEN ID (lowercase)</span>
-                    <input type="text" value={field.id} onChange={(e) => handleUpdateField(idx, "id", e.target.value)} placeholder="e.g., content" className="w-full bg-slate-900 border border-slate-800 px-2 py-1 rounded text-[11px] text-amber-400 font-mono focus:outline-none" />
-                  </div>
-                  <div className="col-span-5 space-y-0.5">
-                    <span className="text-[9px] font-mono font-bold text-slate-500 block">INTERFACE CARD LABEL</span>
-                    <input type="text" value={field.label} onChange={(e) => handleUpdateField(idx, "label", e.target.value)} placeholder="e.g., Source Code" className="w-full bg-slate-900 border border-slate-800 px-2 py-1 rounded text-[11px] text-slate-300 focus:outline-none" />
-                  </div>
-                  <div className="col-span-3 space-y-0.5 relative">
-                    <span className="text-[9px] font-mono font-bold text-slate-500 block">TYPE</span>
-                    <select value={field.type} onChange={(e) => handleUpdateField(idx, "type", e.target.value)} className="w-full bg-slate-900 border border-slate-800 px-1 py-1 rounded text-[11px] text-slate-400 focus:outline-none font-mono">
-                      <option value="text">text</option>
-                      <option value="textarea">textarea</option>
-                    </select>
+            <div className="space-y-3">
+              {fields.map((field, index) => (
+                <div key={`${field.id}-${index}`} className="rounded-xl border border-white/10 bg-[#0f172a]/70 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <Type className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                      <span className="text-sm font-semibold text-white">Field {index + 1}</span>
+                    </div>
                     {fields.length > 1 && (
-                      <button type="button" onClick={() => handleRemoveField(idx)} className="absolute -top-1 -right-1 text-rose-500 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity font-bold">✕</button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveField(index)}
+                        className="rounded-lg border border-rose-300/20 bg-rose-300/10 p-2 text-rose-200 transition-all hover:bg-rose-300/20"
+                        aria-label="Remove field"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
                     )}
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
+                    <label className="space-y-1.5 sm:col-span-4">
+                      <span className="text-xs font-medium text-slate-400">Variable ID</span>
+                      <input
+                        type="text"
+                        value={field.id}
+                        onChange={(event) => handleUpdateField(index, "id", event.target.value)}
+                        placeholder="content"
+                        className="w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 py-2 text-sm text-amber-200 placeholder:text-slate-600 outline-none focus:border-cyan-300/60"
+                      />
+                      <span className="block text-[11px] text-slate-600">Lowercase only. Used as {"{variable_id}"}.</span>
+                    </label>
+
+                    <label className="space-y-1.5 sm:col-span-5">
+                      <span className="text-xs font-medium text-slate-400">Field label</span>
+                      <input
+                        type="text"
+                        value={field.label}
+                        onChange={(event) => handleUpdateField(index, "label", event.target.value)}
+                        placeholder="Source material"
+                        className="w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-300/60"
+                      />
+                      <span className="block text-[11px] text-slate-600">Shown above the input in the Build tab.</span>
+                    </label>
+
+                    <label className="space-y-1.5 sm:col-span-3">
+                      <span className="text-xs font-medium text-slate-400">Input type</span>
+                      <select
+                        value={field.type}
+                        onChange={(event) => handleUpdateField(index, "type", event.target.value)}
+                        className="w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-300/60"
+                      >
+                        <option value="text">Short text</option>
+                        <option value="textarea">Long text</option>
+                      </select>
+                      <span className="block text-[11px] text-slate-600">Use long text for pasted content.</span>
+                    </label>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Blueprint Content Editor Grid Panel */}
-        <div className="lg:col-span-6 space-y-6 w-full">
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl space-y-4 w-full">
-            <div className="space-y-1">
-              <label className="text-[11px] font-mono font-bold text-slate-400 uppercase block tracking-wider">Prompt Template Blueprint Base</label>
-              <p className="text-[10px] text-slate-500 font-sans">Deterministic background rendering stream (Read Only Preview Container)</p>
+        <section className="space-y-5 lg:col-span-6">
+          <div className="rounded-xl border border-white/10 bg-white/[0.035] p-5 shadow-xl shadow-black/10">
+            <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+              <div>
+                <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-cyan-300">
+                  <FileJson className="h-3.5 w-3.5" aria-hidden="true" />
+                  Live preview
+                </p>
+                <h3 className="mt-1 text-base font-semibold text-white">Generated prompt template</h3>
+                <p className="mt-1 text-sm text-slate-500">This read-only preview is what gets saved to your workspace.</p>
+              </div>
+              <button
+                type="button"
+                onClick={resetForge}
+                className="rounded-lg border border-white/10 bg-[#0f172a] px-3 py-2 text-sm font-semibold text-slate-400 transition-all hover:border-white/20 hover:text-white"
+              >
+                <span className="flex items-center gap-2">
+                  <RefreshCcw className="h-4 w-4" aria-hidden="true" />
+                  Reset
+                </span>
+              </button>
             </div>
-            
-            <textarea 
-              rows={16} 
-              value={promptTemplate} 
+
+            <textarea
+              rows={18}
+              value={promptTemplate}
               readOnly
-              className="w-full bg-slate-950/80 border border-slate-850/60 rounded-lg p-4 font-mono text-xs text-emerald-400 select-all cursor-not-allowed leading-relaxed shadow-inner" 
-              placeholder="System compilation tracking buffer..."
+              className="w-full cursor-not-allowed rounded-xl border border-white/10 bg-[#0b1020] p-4 font-mono text-xs leading-relaxed text-emerald-200 outline-none"
             />
 
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <button type="button" onClick={handleCompileAndSave} className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 border-amber-600 text-slate-950 font-mono font-bold py-2.5 rounded-lg text-xs tracking-wide shadow-lg uppercase transition-all">
-                ⚡ Compile Forge Blueprint
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={handleCompileAndSave}
+                className="rounded-lg border border-cyan-300/40 bg-cyan-300/15 px-4 py-3 text-sm font-semibold text-cyan-100 transition-all hover:bg-cyan-300/25"
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <Save className="h-4 w-4" aria-hidden="true" />
+                  Save template
+                </span>
               </button>
-              <button type="button" onClick={handleExportTemplate} className="bg-slate-950 hover:bg-slate-850 border border-slate-800 text-slate-300 font-mono font-bold py-2.5 rounded-lg text-xs uppercase transition-all">
-                📥 Export JSON Pack
+              <button
+                type="button"
+                onClick={handleExportTemplate}
+                className="rounded-lg border border-white/10 bg-[#0f172a] px-4 py-3 text-sm font-semibold text-slate-300 transition-all hover:border-white/20 hover:text-white"
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <Download className="h-4 w-4" aria-hidden="true" />
+                  Export JSON
+                </span>
               </button>
             </div>
           </div>
 
-          {/* JSON File Ingestion Component */}
-          <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl shadow-2xl space-y-3 w-full">
-            <div>
-              <h4 className="text-xs font-bold font-mono text-slate-400 uppercase tracking-wide">📦 Import Shared Custom Template Matrix</h4>
-            </div>
-            
-            <div className="border border-dashed border-slate-800 bg-slate-950 p-4 rounded-lg text-center relative hover:border-slate-700 transition-colors">
-              <input type="file" accept=".json" onChange={handleImportTemplate} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-              <span className="text-xs font-mono text-slate-500 block">Click or Drop `.json` Workflow Assets File Here</span>
+          <div className="rounded-xl border border-white/10 bg-white/[0.035] p-5 shadow-xl shadow-black/10">
+            <div className="mb-3">
+              <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-cyan-300">
+                <FileUp className="h-3.5 w-3.5" aria-hidden="true" />
+                Import template
+              </p>
+              <h3 className="mt-1 text-base font-semibold text-white">Bring in a JSON workflow</h3>
+              <p className="mt-1 text-sm text-slate-500">Import a pack exported from this tool or shared by someone else.</p>
             </div>
 
-            {importSuccess && <p className="text-[11px] font-mono text-emerald-400 bg-emerald-950/20 border border-emerald-900/60 p-2 rounded-md animate-fadeIn">✓ Schema mapping processed and committed to runtime storage matrix.</p>}
-            {importError && <p className="text-[11px] font-mono text-rose-500 bg-rose-950/20 border border-rose-900/60 p-2 rounded-md animate-fadeIn">⚠️ Schema Mapping Failure: {importError}</p>}
+            <div className="relative rounded-xl border border-dashed border-white/10 bg-[#0f172a]/60 p-6 text-center transition-all hover:border-cyan-300/30">
+              <input type="file" accept=".json" onChange={handleImportTemplate} className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" />
+              <FileUp className="mx-auto mb-2 h-7 w-7 text-slate-500" aria-hidden="true" />
+              <span className="block text-sm font-medium text-slate-300">Click to choose a JSON file</span>
+              <span className="mt-1 block text-xs text-slate-600">The template will be added to your Build workflows.</span>
+            </div>
+
+            {importSuccess && (
+              <p className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-300/20 bg-emerald-300/10 p-3 text-sm text-emerald-200">
+                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                Template imported successfully.
+              </p>
+            )}
+            {importError && (
+              <p className="mt-3 flex items-center gap-2 rounded-lg border border-rose-300/20 bg-rose-300/10 p-3 text-sm text-rose-200">
+                <AlertCircle className="h-4 w-4" aria-hidden="true" />
+                {importError}
+              </p>
+            )}
           </div>
-        </div>
+
+          <HelperPanel />
+        </section>
       </div>
 
-      {/* SECTION 3: Dynamic Management Inventory Registry List */}
       {Object.keys(customRegistry).length > 0 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-2xl space-y-3 w-full animate-fadeIn">
-          <div>
-            <h4 className="text-xs font-bold font-mono text-slate-400 uppercase tracking-wider">🗃️ Active User Custom Workflows Inventory</h4>
-            <p className="text-[11px] text-slate-500 mt-0.5">Manage and evict compiled layout extensions resting inside local cluster nodes disk memory</p>
+        <section className="rounded-xl border border-white/10 bg-white/[0.035] p-5 shadow-xl shadow-black/10">
+          <div className="mb-4">
+            <h3 className="flex items-center gap-2 text-base font-semibold text-white">
+              <Hammer className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              Your custom workflows
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">Manage templates saved in this browser.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {Object.values(customRegistry).map((item) => (
-              <div key={item.id} className="bg-slate-950 border border-slate-850 p-3.5 rounded-xl flex justify-between items-start gap-4">
-                <div className="space-y-1 truncate">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-amber-950/40 border border-amber-900/60 text-amber-400 font-bold">Custom</span>
-                    <h5 className="text-xs font-bold font-mono text-slate-300 truncate">{item.shortName}</h5>
-                  </div>
-                  <p className="text-[11px] text-slate-400 font-sans truncate">{item.label}</p>
-                  <p className="text-[10px] text-slate-500 font-mono truncate">{item.fields.length} dynamic variables initialized</p>
+              <div key={item.id} className="flex items-start justify-between gap-4 rounded-xl border border-white/10 bg-[#0f172a]/70 p-4">
+                <div className="min-w-0 space-y-1">
+                  <span className="inline-flex rounded-md border border-cyan-300/20 bg-cyan-300/10 px-2 py-0.5 text-[11px] font-semibold text-cyan-200">
+                    Custom
+                  </span>
+                  <h4 className="truncate text-sm font-semibold text-white">{item.shortName}</h4>
+                  <p className="truncate text-sm text-slate-500">{item.label}</p>
+                  <p className="text-xs text-slate-600">{item.fields.length} fields</p>
                 </div>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => handleDeleteCustomTemplate(item.id)}
-                  className="text-[10px] font-mono bg-rose-950/20 hover:bg-rose-900 hover:text-white border border-rose-900/40 text-rose-400 px-2 py-1 rounded transition-all shrink-0 active:scale-95"
+                  className="rounded-lg border border-rose-300/20 bg-rose-300/10 p-2 text-rose-200 transition-all hover:bg-rose-300/20"
+                  aria-label={`Delete ${item.shortName}`}
                 >
-                  Delete
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
+    </div>
+  );
+}
+
+function FieldShell({ label, helper, required = false, children }) {
+  return (
+    <label className="block rounded-xl border border-white/10 bg-[#0f172a]/70 p-4">
+      <span className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-200">
+        {label}
+        {required && <span className="ml-auto text-xs font-medium text-cyan-300">Required</span>}
+      </span>
+      <span className="mb-3 flex items-start gap-2 text-xs leading-relaxed text-slate-500">
+        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-600" aria-hidden="true" />
+        {helper}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function HelperPanel() {
+  return (
+    <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-5">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-cyan-100">
+        <Info className="h-4 w-4" aria-hidden="true" />
+        Template tips
+      </h3>
+      <div className="mt-3 space-y-2 text-sm leading-relaxed text-cyan-50/75">
+        <p>Use the system role for expertise: who should the model act as?</p>
+        <p>Use the objective for the repeatable task: what should the model do every time?</p>
+        <p>Use fields for anything users should change between runs, like source text, audience, tone, or constraints.</p>
+      </div>
     </div>
   );
 }
