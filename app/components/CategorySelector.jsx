@@ -1,78 +1,74 @@
+import { BarChart3, FileSearch, ListFilter, PenLine, ScanSearch, Trash2 } from "lucide-react";
+
+const categoryIcons = {
+  summarize: BarChart3,
+  extractData: FileSearch,
+  classify: ListFilter,
+  write: PenLine,
+  analyze: ScanSearch,
+};
+
 export default function CategorySelector({ categories, activeId, onSelect }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
       {categories.map((category) => {
-  const isSelected = activeId === category.id;
-  
-  // Define a local click handler specifically to evict custom layouts safely
-  const handleInlineDelete = (e, templateId, shortName) => {
-    // CRITICAL: Stop the click event from bubbling up to the main select workflow button
-    e.stopPropagation();
+        const isSelected = activeId === category.id;
+        const Icon = categoryIcons[category.id] || ScanSearch;
 
-    if (!confirm(`Are you sure you want to permanently delete the [${shortName}] custom template from your workspace cache?`)) return;
+        const handleInlineDelete = (event, templateId, shortName) => {
+          event.stopPropagation();
 
-    const existingCustom = JSON.parse(localStorage.getItem("prompt_builder_custom_templates") || "{}");
-    delete existingCustom[templateId];
+          if (!confirm(`Delete the "${shortName}" custom template?`)) return;
 
-    if (Object.keys(existingCustom).length === 0) {
-      localStorage.removeItem("prompt_builder_custom_templates");
-    } else {
-      localStorage.setItem("prompt_builder_custom_templates", JSON.stringify(existingCustom));
-    }
+          const existingCustom = JSON.parse(localStorage.getItem("prompt_builder_custom_templates") || "{}");
+          delete existingCustom[templateId];
 
-    alert("Template successfully removed from system disk configurations registry.");
-    
-    // Force an application-wide storage context reload automatically
-    if (window && typeof window.dispatchEvent === "function") {
-      // Direct global dispatch handler to force Workspace.jsx to trigger its refresh hook
-      window.location.reload(); 
-    }
-  };
+          if (Object.keys(existingCustom).length === 0) {
+            localStorage.removeItem("prompt_builder_custom_templates");
+          } else {
+            localStorage.setItem("prompt_builder_custom_templates", JSON.stringify(existingCustom));
+          }
 
-  return (
-    <button
-      key={category.id}
-      type="button"
-      onClick={() => onSelect(category.id)}
-      className={`w-full text-left p-3.5 rounded-xl border font-mono text-xs flex justify-between items-center transition-all ${
-        isSelected
-          ? "bg-slate-950 text-slate-200 border-slate-750 shadow-inner"
-          : "bg-slate-900/40 text-slate-500 hover:text-slate-400 border-transparent"
-      }`}
-    >
-      <div className="flex flex-col gap-0.5 truncate">
-        <span className={`font-semibold tracking-wide ${isSelected ? "text-indigo-400" : "text-slate-400"}`}>
-          {category.shortName}
-        </span>
-        <span className="text-[10px] text-slate-500 font-sans truncate max-w-[140px]">
-          {category.label}
-        </span>
-      </div>
+          window.location.reload();
+        };
 
-      {/* DYNAMIC RELATIVE HOVER OVERLAY BADGE */}
-      {(category.isCustom || category.id.startsWith("custom_")) && (
-        <div className="relative group/badge ml-2 shrink-0 select-none">
-          
-          {/* STATIC STATE: Shows standard Custom text pill by default */}
-          <span className="text-[8px] tracking-wider uppercase font-mono font-bold px-1.5 py-0.5 rounded bg-amber-950/50 border border-amber-900/60 text-amber-400 block group-hover/badge:opacity-0 transition-opacity duration-150">
-            Custom
-          </span>
-
-          {/* HOVER STATE: Switches into a clickable absolute delete button anchor */}
+        return (
           <button
+            key={category.id}
             type="button"
-            onClick={(e) => handleInlineDelete(e, category.id, category.shortName)}
-            className="absolute inset-0 text-[8px] tracking-wider uppercase font-mono font-bold rounded bg-rose-950 border border-rose-900 text-rose-400 hover:bg-rose-900 hover:text-white transition-all opacity-0 group-hover/badge:opacity-100 flex items-center justify-center cursor-pointer shadow-md z-20"
-            title="Delete Template"
+            onClick={() => onSelect(category.id)}
+            className={`group flex min-h-28 w-full flex-col justify-between rounded-xl border p-4 text-left transition-all ${
+              isSelected
+                ? "border-cyan-300/40 bg-cyan-300/10 shadow-inner"
+                : "border-white/10 bg-[#0f172a]/70 hover:border-white/20 hover:bg-[#111c33]"
+            }`}
           >
-            ✕ Delete
+            <div className="space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <span className={`flex items-center gap-2 text-sm font-semibold ${isSelected ? "text-cyan-100" : "text-slate-200"}`}>
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                  {category.shortName}
+                </span>
+                {isSelected && <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.65)]" />}
+              </div>
+              <p className="line-clamp-2 text-xs leading-relaxed text-slate-500">{category.label}</p>
+            </div>
+
+            {(category.isCustom || category.id.startsWith("custom_")) && (
+              <button
+                type="button"
+                onClick={(event) => handleInlineDelete(event, category.id, category.shortName)}
+                className="mt-3 w-fit rounded-md border border-rose-400/20 bg-rose-400/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-rose-200 opacity-80 transition-all hover:border-rose-300/40 hover:bg-rose-400/20"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Trash2 className="h-3 w-3" aria-hidden="true" />
+                  Delete
+                </span>
+              </button>
+            )}
           </button>
-          
-        </div>
-      )}
-    </button>
-  );
-})}
+        );
+      })}
     </div>
   );
 }

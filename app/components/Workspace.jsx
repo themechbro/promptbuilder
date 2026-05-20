@@ -1,30 +1,52 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import {
+  Boxes,
+  CheckCircle2,
+  Compass,
+  FileText,
+  GitBranch,
+  History,
+  Layers3,
+  PenTool,
+  RefreshCcw,
+  Send,
+  Sparkles,
+  TestTube2,
+  Trash2,
+  Wrench,
+} from "lucide-react";
 import { templates, getAllTemplates } from "../data/templates";
 import { buildPrompt } from "../data/utils/buildPrompt";
 import { countTokens } from "../data/utils/countTokens";
 import CategorySelector from "./CategorySelector";
 import PromptForm from "./PromptForm";
 import PromptOutput from "./PromptOutput";
-import DiagnosticTestHarness from "./DiagnosticTestHarness";
-const PdfUploader = dynamic(() => import("./PdfUploader"), { 
-  ssr: false,
-  loading: () => <div className="text-xs font-mono text-slate-500 animate-pulse">Loading Pipeline...</div>
-});
 import QuickstartGuide from "./QuickstartGuide";
 import TemplateForge from "./TemplateForge";
 import CommunityHub from "./CommunityHub";
 
+const PdfUploader = dynamic(() => import("./PdfUploader"), {
+  ssr: false,
+  loading: () => <div className="text-xs text-slate-500">Loading uploader...</div>,
+});
+
+const navItems = [
+  { id: "template", label: "Build", helper: "Templates", icon: Layers3 },
+  { id: "sandbox", label: "Test", helper: "Models", icon: TestTube2 },
+  { id: "forge", label: "Create", helper: "Custom", icon: PenTool },
+  { id: "hub", label: "Explore", helper: "Community", icon: Compass },
+];
+
+const uploadEnabledCategories = new Set(["extractData", "summarize", "analyze"]);
+
 export default function Workspace() {
-  // Core Application View Routing Tracking Layer
-  const [activeTab, setActiveTab] = useState("template"); // "template" | "sandbox" | "forge"
-  
-  // Dynamic Template Schema Registries State Matrix
+  const [activeTab, setActiveTab] = useState("template");
   const [templatesRegistry, setTemplatesRegistry] = useState({});
   const [activeCategory, setActiveCategory] = useState("summarize");
-  
+
   const [formValues, setFormValues] = useState({});
   const [generatedPrompt, setGeneratedPrompt] = useState("");
   const [tokenCount, setTokenCount] = useState(0);
@@ -33,69 +55,79 @@ export default function Workspace() {
   const [roughTokenCount, setRoughTokenCount] = useState(0);
   const [history, setHistory] = useState([]);
 
-  // V1.1.0/V1.2.0 Pipeline Buffers
-  const [chainBuffer, setChainBuffer] = useState(""); 
-  const [promptVersions, setPromptVersions] = useState({}); 
+  const [chainBuffer, setChainBuffer] = useState("");
+  const [promptVersions, setPromptVersions] = useState({});
 
-  // Hoisted Transient Credentials Vault
   const [geminiKey, setGeminiKey] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
   const [anthropicKey, setAnthropicKey] = useState("");
 
-  // 1. FEATURE: Hydrate Registry Dynamically from System + Disk Cache
   const refreshTemplates = () => {
-    const hydratedTemplates = getAllTemplates();
-    setTemplatesRegistry(hydratedTemplates);
+    setTemplatesRegistry(getAllTemplates());
   };
 
-  // Run dynamic hydration on system mount
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshTemplates();
 
     const savedHistory = localStorage.getItem("prompt_builder_history");
     if (savedHistory) {
-      try { setHistory(JSON.parse(savedHistory)); } catch (e) { console.error(e); }
+      try {
+        setHistory(JSON.parse(savedHistory));
+      } catch (error) {
+        console.error(error);
+      }
     }
-    
+
     setGeminiKey(sessionStorage.getItem("sandbox_sk_gemini") || "");
     setOpenaiKey(sessionStorage.getItem("sandbox_sk_openai") || "");
     setAnthropicKey(sessionStorage.getItem("sandbox_sk_anthropic") || "");
 
-    const handleSimulatedChain = (e) => setChainBuffer(e.detail);
+    const handleSimulatedChain = (event) => setChainBuffer(event.detail);
     document.addEventListener("simulateChainBuffer", handleSimulatedChain);
     return () => document.removeEventListener("simulateChainBuffer", handleSimulatedChain);
   }, []);
 
-  // Safe fallback evaluator layer
-  const currentTemplate = templatesRegistry[activeCategory] || templatesRegistry["summarize"] || Object.values(templatesRegistry)[0];
+  const currentTemplate = templatesRegistry[activeCategory] || templatesRegistry.summarize || Object.values(templatesRegistry)[0];
+  const chainTargetField = currentTemplate?.fields?.find((field) => field.id === "content")
+    || currentTemplate?.fields?.find((field) => field.type === "textarea")
+    || currentTemplate?.fields?.find((field) => /content|source|material|input|text|topic/i.test(`${field.id} ${field.label}`))
+    || currentTemplate?.fields?.find((field) => field.required)
+    || currentTemplate?.fields?.[0];
+  const chainTargetValue = chainTargetField ? formValues[chainTargetField.id] || "" : "";
+  const canLinkChainBuffer = Boolean(chainBuffer && chainTargetField && chainTargetValue !== chainBuffer);
+  const hasWorkspaceValues = Object.values(formValues).some((value) => String(value || "").trim() !== "") || roughPrompt.trim() !== "";
 
-  // Form Caching Layer
   useEffect(() => {
     if (!activeCategory) return;
     const savedForm = localStorage.getItem(`form_cache_${activeCategory}`);
     if (savedForm) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      try { setFormValues(JSON.parse(savedForm)); return; } catch (e) { console.error(e); }
+      try {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setFormValues(JSON.parse(savedForm));
+        return;
+      } catch (error) {
+        console.error(error);
+      }
     }
-    setFormValues({}); 
+    setFormValues({});
   }, [activeCategory]);
 
-  const handleFieldChange = (id, val) => {
+  const handleFieldChange = (id, value) => {
     setFormValues((prev) => {
-      const updated = { ...prev, [id]: val };
+      const updated = { ...prev, [id]: value };
       localStorage.setItem(`form_cache_${activeCategory}`, JSON.stringify(updated));
       return updated;
     });
   };
 
-  // Compile prompt structures dynamically
   useEffect(() => {
     if (!currentTemplate) return;
     const compiled = buildPrompt(currentTemplate.prompt_template, formValues);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setGeneratedPrompt(compiled);
     setTokenCount(countTokens(compiled));
-    setRawContentTokens(countTokens(formValues["content"] || ""));
+    setRawContentTokens(countTokens(formValues.content || ""));
   }, [formValues, currentTemplate]);
 
   useEffect(() => {
@@ -117,8 +149,8 @@ export default function Workspace() {
         category: currentTemplate.shortName,
         categoryId: activeCategory,
         prompt: finalPrompt,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        formValues: { ...formValues }
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        formValues: { ...formValues },
       };
       const updated = [newEntry, ...prev].slice(0, 10);
       localStorage.setItem("prompt_builder_history", JSON.stringify(updated));
@@ -128,8 +160,7 @@ export default function Workspace() {
     setPromptVersions((prev) => {
       const currentVersions = prev[activeCategory] || [];
       if (currentVersions[0] === finalPrompt) return prev;
-      const updatedVersions = [finalPrompt, ...currentVersions].slice(0, 3);
-      return { ...prev, [activeCategory]: updatedVersions };
+      return { ...prev, [activeCategory]: [finalPrompt, ...currentVersions].slice(0, 3) };
     });
   };
 
@@ -139,18 +170,29 @@ export default function Workspace() {
       setFormValues(item.formValues);
       localStorage.setItem(`form_cache_${item.categoryId}`, JSON.stringify(item.formValues));
     }, 50);
-    setActiveTab("template"); 
+    setActiveTab("template");
   };
 
   const handleIngestChainBuffer = () => {
-    if (!chainBuffer) return;
-    handleFieldChange("content", chainBuffer);
+    if (!chainBuffer || !chainTargetField) return;
+    handleFieldChange(chainTargetField.id, chainBuffer);
+  };
+
+  const handleResetWorkspace = () => {
+    setFormValues({});
+    setRoughPrompt("");
+    localStorage.removeItem(`form_cache_${activeCategory}`);
+  };
+
+  const handleClearHistory = () => {
+    setHistory([]);
+    localStorage.removeItem("prompt_builder_history");
   };
 
   const renderPromptOutputContainer = () => (
-    <PromptOutput 
-      prompt={generatedPrompt} 
-      tokenCount={tokenCount} 
+    <PromptOutput
+      prompt={generatedPrompt}
+      tokenCount={tokenCount}
       rawContentTokens={rawContentTokens}
       roughPrompt={roughPrompt}
       setRoughPrompt={setRoughPrompt}
@@ -160,128 +202,216 @@ export default function Workspace() {
       setChainBuffer={setChainBuffer}
       versions={promptVersions[activeCategory] || []}
       onRestoreVersion={(restoredPrompt) => setGeneratedPrompt(restoredPrompt)}
-      geminiKey={geminiKey} setGeminiKey={setGeminiKey}
-      openaiKey={openaiKey} setOpenaiKey={setOpenaiKey}
-      anthropicKey={anthropicKey} setAnthropicKey={setAnthropicKey}
+      geminiKey={geminiKey}
+      setGeminiKey={setGeminiKey}
+      openaiKey={openaiKey}
+      setOpenaiKey={setOpenaiKey}
+      anthropicKey={anthropicKey}
+      setAnthropicKey={setAnthropicKey}
     />
   );
 
   return (
-    <div className="w-full space-y-6">
-      
-      {/* 3-Tab Master Nav Header Route Selector */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-md gap-4 w-full">
-        <div className="flex flex-wrap gap-2 bg-slate-950 p-1 rounded-lg border border-slate-800/60">
-          <button
-            type="button"
-            onClick={() => setActiveTab("template")}
-            className={`px-4 py-2 text-xs font-mono rounded-md font-semibold transition-all ${
-              activeTab === "template" ? "bg-slate-800 text-slate-200 shadow border border-slate-700" : "text-slate-500 hover:text-slate-300"
-            }`}
-          >
-            📋 Template Studio
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("sandbox")}
-            className={`px-4 py-2 text-xs font-mono rounded-md font-semibold transition-all flex items-center gap-2 ${
-              activeTab === "sandbox" ? "bg-slate-800 text-indigo-400 shadow border border-slate-700" : "text-slate-500 hover:text-slate-300"
-            }`}
-          >
-            <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
-            ⚡ Interactive Sandbox
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("forge")}
-            className={`px-4 py-2 text-xs font-mono rounded-md font-semibold transition-all flex items-center gap-2 ${
-              activeTab === "forge" ? "bg-slate-800 text-amber-400 shadow border border-slate-700" : "text-slate-500 hover:text-slate-300"
-            }`}
-          >
-            🔨 Custom Template Forge
-          </button>
-          <button
-          type="button"
-          onClick={() => setActiveTab("hub")}
-          className={`px-4 py-2 text-xs font-mono rounded-md font-semibold transition-all flex items-center gap-2 ${
-          activeTab === "hub" ? "bg-slate-800 text-emerald-400 shadow border border-slate-700" : "text-slate-500 hover:text-slate-300"
-  }`}
->
-  📦 Community Hub
-</button>
-        </div>
-        
-        <div className="text-[11px] font-mono text-slate-500 bg-slate-950/40 px-3 py-1.5 rounded-lg border border-slate-850 self-end sm:self-auto">
-          Status: <span className="text-emerald-400 font-bold">Dynamic Engine Layer Engaged</span>
+    <div className="w-full space-y-5">
+      <div className="rounded-xl border border-white/10 bg-white/[0.035] p-3 shadow-2xl shadow-black/20">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {navItems.map((item) => {
+              const isActive = activeTab === item.id;
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveTab(item.id)}
+                  className={`min-w-32 rounded-lg border px-4 py-3 text-left transition-all ${
+                    isActive
+                      ? "border-cyan-300/40 bg-cyan-300/10 text-white shadow-inner"
+                      : "border-white/10 bg-[#0f172a]/70 text-slate-400 hover:border-white/20 hover:text-slate-200"
+                  }`}
+                >
+                  <span className="flex items-center gap-2 text-sm font-semibold">
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                    {item.label}
+                  </span>
+                  <span className="mt-1 block pl-6 text-[11px] text-slate-500">{item.helper}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4 lg:min-w-[460px]">
+            <div className="rounded-lg border border-white/10 bg-[#0f172a]/70 px-3 py-2">
+              <span className="flex items-center gap-1.5 text-slate-500"><Boxes className="h-3.5 w-3.5" aria-hidden="true" />Workflow</span>
+              <strong className="mt-1 block truncate text-slate-200">{currentTemplate?.shortName || "None"}</strong>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-[#0f172a]/70 px-3 py-2">
+              <span className="flex items-center gap-1.5 text-slate-500"><FileText className="h-3.5 w-3.5" aria-hidden="true" />Prompt</span>
+              <strong className={`mt-1 block ${generatedPrompt.trim() ? "text-cyan-200" : "text-slate-600"}`}>
+                {generatedPrompt.trim() ? "Ready" : "Empty"}
+              </strong>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-[#0f172a]/70 px-3 py-2">
+              <span className="flex items-center gap-1.5 text-slate-500"><Sparkles className="h-3.5 w-3.5" aria-hidden="true" />Tokens</span>
+              <strong className="mt-1 block text-slate-200">{tokenCount}</strong>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-[#0f172a]/70 px-3 py-2">
+              <span className="flex items-center gap-1.5 text-slate-500"><GitBranch className="h-3.5 w-3.5" aria-hidden="true" />Chain</span>
+              <strong className={`mt-1 block ${chainBuffer ? "text-emerald-300" : "text-slate-600"}`}>
+                {chainBuffer ? "Ready" : "Empty"}
+              </strong>
+            </div>
+          </div>
         </div>
       </div>
 
-      <QuickstartGuide />
+      <QuickstartGuide
+        activeTab={activeTab}
+        activeCategory={activeCategory}
+        hasWorkspaceValues={Boolean(hasWorkspaceValues)}
+        hasPrompt={Boolean(generatedPrompt.trim())}
+        hasChainBuffer={Boolean(chainBuffer)}
+        tokenCount={tokenCount}
+        onOpenTemplate={() => setActiveTab("template")}
+        onOpenSandbox={() => setActiveTab("sandbox")}
+        onSelectWorkflow={handleCategoryChange}
+        onResetWorkspace={handleResetWorkspace}
+      />
 
-      {/* ==========================================
-          DYNAMIC 3-TAB RENDERING MULTIPLEXER
-         ========================================== */}
       {activeTab === "forge" ? (
-        /* Render New Authoring Zone */
         <TemplateForge onTemplatesUpdated={refreshTemplates} />
+      ) : activeTab === "hub" ? (
+        <CommunityHub onTemplatesUpdated={refreshTemplates} />
       ) : activeTab === "template" ? (
-        /* Render Standard Studio Forms Split */
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fadeIn w-full">
-          <section className="lg:col-span-7 space-y-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl">
-              <h2 className="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-4 font-mono">Step 1: Select Workflow</h2>
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
+          <section className="space-y-5 lg:col-span-7">
+            <section className="rounded-xl border border-white/10 bg-white/[0.035] p-5 shadow-xl shadow-black/10">
+              <div className="mb-4 flex items-end justify-between gap-3">
+                <div>
+                  <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-cyan-300">
+                    <Layers3 className="h-3.5 w-3.5" aria-hidden="true" />
+                    Choose a workflow
+                  </p>
+                  <h2 className="mt-1 text-lg font-semibold text-white">What do you want this prompt to do?</h2>
+                </div>
+                <span className="hidden rounded-md border border-white/10 bg-[#0f172a] px-2.5 py-1 text-xs text-slate-500 sm:block">
+                  Step 1
+                </span>
+              </div>
               <CategorySelector categories={Object.values(templatesRegistry)} activeId={activeCategory} onSelect={handleCategoryChange} />
-            </div>
+            </section>
 
             {currentTemplate && (
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl relative">
-                {chainBuffer && !formValues["content"] && (
-                  <div className="absolute top-4 right-6 animate-pulse z-10">
-                    <button type="button" onClick={handleIngestChainBuffer} className="text-[10px] bg-indigo-600/20 text-indigo-400 border border-indigo-500/40 px-2.5 py-1 rounded-md hover:bg-indigo-600 hover:text-white transition-all font-mono">
-                      🔗 Link Upstream Output Data
-                    </button>
+              <section className="relative rounded-xl border border-white/10 bg-white/[0.035] p-5 shadow-xl shadow-black/10">
+                {canLinkChainBuffer && (
+                  <div className="mb-4 rounded-lg border border-emerald-400/30 bg-emerald-400/10 p-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="flex items-center gap-2 text-sm font-medium text-emerald-200">
+                          <GitBranch className="h-4 w-4" aria-hidden="true" />
+                          Upstream output is ready
+                        </p>
+                        <p className="mt-0.5 text-xs text-emerald-100/70">
+                          Send the previous model result into {chainTargetField?.label || "this workflow"}.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleIngestChainBuffer}
+                        className="rounded-lg border border-emerald-300/40 bg-emerald-300/15 px-3 py-2 text-xs font-semibold text-emerald-100 transition-all hover:bg-emerald-300/25"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Send className="h-3.5 w-3.5" aria-hidden="true" />
+                          {chainTargetValue ? "Replace field" : "Use output"}
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 )}
-                <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div>
-                    <h2 className="text-lg font-medium text-slate-200">{currentTemplate.label}</h2>
-                    <p className="text-sm text-slate-400 mt-1">{currentTemplate.description}</p>
+
+                <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+                  <div className="max-w-2xl">
+                    <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-cyan-300">
+                      <Wrench className="h-3.5 w-3.5" aria-hidden="true" />
+                      Fill the details
+                    </p>
+                    <h2 className="mt-1 text-lg font-semibold text-white">{currentTemplate.label}</h2>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-400">{currentTemplate.description}</p>
                   </div>
-                  {activeCategory === "extractData" || activeCategory === "summarize" || activeCategory === "analyze" ? (
-                    <div className="w-full sm:w-auto sm:min-w-[260px]">
-                      <PdfUploader key={activeCategory} onTextExtracted={(markdown) => handleFieldChange("content", markdown)} />
-                    </div>
-                  ) : null}
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    {hasWorkspaceValues && (
+                      <button
+                        type="button"
+                        onClick={handleResetWorkspace}
+                        className="rounded-lg border border-white/10 bg-[#0f172a] px-3 py-2 text-xs font-semibold text-slate-400 transition-all hover:border-rose-400/40 hover:text-rose-200"
+                      >
+                        <span className="flex items-center gap-2">
+                          <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                          Reset values
+                        </span>
+                      </button>
+                    )}
+                    {uploadEnabledCategories.has(activeCategory) ? (
+                      <div className="w-full sm:w-[280px]">
+                        <PdfUploader key={activeCategory} onTextExtracted={(markdown) => handleFieldChange("content", markdown)} />
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
                 <PromptForm fields={currentTemplate.fields} values={formValues} onFieldChange={handleFieldChange} />
-              </div>
+              </section>
             )}
 
             {history.length > 0 && (
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl">
-                <h3 className="text-xs font-semibold tracking-wider text-slate-400 uppercase mb-3 font-mono">Recent Prompt Workbench History (Local Cache)</h3>
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <section className="rounded-xl border border-white/10 bg-white/[0.035] p-5 shadow-xl shadow-black/10">
+                <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                  <div>
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+                      <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                      Recent prompts
+                    </h3>
+                    <p className="mt-0.5 text-xs text-slate-500">Click one to restore its workflow and values.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClearHistory}
+                    className="self-start rounded-lg border border-white/10 bg-[#0f172a] px-3 py-1.5 text-xs font-semibold text-slate-500 transition-all hover:border-rose-400/40 hover:text-rose-200 sm:self-auto"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      Delete history
+                    </span>
+                  </button>
+                </div>
+                <div className="space-y-2 overflow-y-auto pr-1 sm:max-h-56">
                   {history.map((item) => (
-                    <button key={item.id} onClick={() => handleLoadHistoryItem(item)} className="w-full text-left bg-slate-950 hover:bg-slate-800/60 border border-slate-800 px-3 py-2 rounded-lg text-xs flex justify-between items-center transition-all group font-mono">
-                      <div className="flex items-center gap-2 truncate">
-                        <span className="bg-indigo-950 text-indigo-400 border border-indigo-900 px-1.5 py-0.5 rounded text-[10px] font-bold">{item.category}</span>
-                        <span className="text-slate-400 truncate group-hover:text-slate-200">{item.prompt.replace(/\[.*?\]/g, "").trim()}</span>
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleLoadHistoryItem(item)}
+                      className="flex w-full items-center justify-between gap-3 rounded-lg border border-white/10 bg-[#0f172a]/70 px-3 py-2 text-left text-xs transition-all hover:border-cyan-300/30 hover:bg-[#111c33]"
+                    >
+                      <div className="min-w-0">
+                        <span className="mb-1 inline-flex rounded-md border border-cyan-300/20 bg-cyan-300/10 px-2 py-0.5 text-[10px] font-semibold text-cyan-200">
+                          <CheckCircle2 className="mr-1 h-3 w-3" aria-hidden="true" />
+                          {item.category}
+                        </span>
+                        <span className="block truncate text-slate-400">{item.prompt.replace(/\[.*?\]/g, "").trim()}</span>
                       </div>
-                      <span className="text-[10px] text-slate-600 font-sans shrink-0">{item.timestamp}</span>
+                      <span className="shrink-0 text-[11px] text-slate-600">{item.timestamp}</span>
                     </button>
                   ))}
                 </div>
-              </div>
+              </section>
             )}
           </section>
 
-          <section className="lg:col-span-5 lg:sticky lg:top-24">
+          <section className="lg:sticky lg:top-24 lg:col-span-5">
             {renderPromptOutputContainer()}
           </section>
         </div>
-      ) : activeTab === "hub"? (<CommunityHub onTemplatesUpdated={refreshTemplates}/>):(
-        /* Render Expanded Sandbox Playground Matrix */
-        <div className="w-full animate-fadeIn">
+      ) : (
+        <div className="w-full">
           {renderPromptOutputContainer()}
         </div>
       )}
