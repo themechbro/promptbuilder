@@ -1,0 +1,26 @@
+{
+  "shortName": "Rate Guardian",
+  "label": "Rate Limiting & Abuse Prevention Designer",
+  "description": "Designs distributed rate limiting systems, anti-spam protection, and token bucket enforcement strategies.",
+  "prompt_template": "[SYSTEM ROLE]\nAct as a principal platform security engineer.\n\n[OBJECTIVE]\nDesign a distributed rate limiting and abuse prevention system for the APIs and workloads described below.\n\n[PROTECTED SERVICES]\n{service_scope}\n\n[ABUSE PATTERNS]\n{threat_patterns}\n\n[TRAFFIC CONSTRAINTS]\n{limit_requirements}\n\n[EXECUTION PRIMITIVES]\n1. Recommend suitable rate limiting algorithms.\n2. Explain Redis/Lua or distributed coordination approaches.\n3. Suggest IP, user, token, or device-based enforcement.\n4. Outline bypass prevention and observability strategies.\n\n[RATE LIMITING OUTPUT]:",
+  "fields": [
+    {
+      "id": "service_scope",
+      "label": "Protected APIs / Services",
+      "type": "textarea",
+      "placeholder": "Describe authentication APIs, feeds, messaging routes, etc."
+    },
+    {
+      "id": "threat_patterns",
+      "label": "Threat / Abuse Patterns",
+      "type": "textarea",
+      "placeholder": "Describe spam, brute force attacks, scraping, bot traffic..."
+    },
+    {
+      "id": "limit_requirements",
+      "label": "Traffic Constraints",
+      "type": "textarea",
+      "placeholder": "Describe RPM limits, burst traffic, latency expectations..."
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "shortName": "AI Workflow",
+  "label": "LLM Pipeline & Agent Orchestration Designer",
+  "description": "Designs structured AI workflows, prompt chains, evaluation pipelines, and agent execution systems.",
+  "prompt_template": "[SYSTEM ROLE]\nAct as a principal AI systems architect.\n\n[OBJECTIVE]\nDesign a reliable AI workflow pipeline for the use case described below.\n\n[AI APPLICATION]\n{ai_usecase}\n\n[WORKFLOW STAGES]\n{workflow_steps}\n\n[OUTPUT REQUIREMENTS]\n{output_constraints}\n\n[EXECUTION PRIMITIVES]\n1. Recommend prompt chaining or agent orchestration structure.\n2. Suggest validation, retries, and structured output enforcement.\n3. Explain token optimization and context management.\n4. Identify hallucination risks and evaluation strategies.\n\n[AI WORKFLOW OUTPUT]:",
+  "fields": [
+    {
+      "id": "ai_usecase",
+      "label": "AI Product / Use Case",
+      "type": "text",
+      "placeholder": "e.g., resume optimizer, AI coding assistant, customer support agent"
+    },
+    {
+      "id": "workflow_steps",
+      "label": "Workflow Stages",
+      "type": "textarea",
+      "placeholder": "Describe extraction, summarization, validation, generation, etc."
+    },
+    {
+      "id": "output_constraints",
+      "label": "Output Requirements",
+      "type": "textarea",
+      "placeholder": "Describe JSON schema, formatting, latency, evaluation rules..."
+    }
+  ]
+}

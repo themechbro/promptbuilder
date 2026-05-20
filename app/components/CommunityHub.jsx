@@ -43,6 +43,55 @@ const PACK_CATALOG = [
     label: "SEO & Growth Outline",
     description: "Generates highly optimized SEO titles, meta descriptions, and structural blog outlines.",
     path: "/packs/marketing-pack.json"
+  },
+  {
+    id: "redisstrategist_pack",
+    icon: "🗄️",
+    title: "Redis Strategist Pack",
+    label: "Distributed Cache & Redis Topology Planner",
+    description: "Designs scalable Redis caching architectures, invalidation strategies, and distributed data access patterns.",
+    path: "/packs/redis-pack.json"
+  },
+  {
+    id: "feed_pack",
+    icon: "💻📝",
+    title: "Feed Optimizer Pack",
+    label: "Social Feed Ranking & Fanout Architect",
+    description: "Builds scalable feed generation strategies for social platforms using fanout, ranking, and caching pipelines.",
+    path: "/packs/feed-pack.json"
+  },
+  {
+    id: "feed_pack",
+    icon: "💻📝",
+    title: "Feed Optimizer Pack",
+    label: "Social Feed Ranking & Fanout Architect",
+    description: "Builds scalable feed generation strategies for social platforms using fanout, ranking, and caching pipelines.",
+    path: "/packs/feed-pack.json"
+  },
+  ,
+  {
+    id: "videostream_pack",
+    icon: "▶️",
+    title: "Streaming Engineer Pack",
+    label: "Video Streaming & Media Pipeline Architect",
+    description: "Designs scalable HLS, CDN, transcoding, and adaptive video delivery infrastructures.",
+    path: "/packs/videostream-pack.json"
+  },
+  {
+    id: "interview_pack",
+    icon: "🗣️🤝✅",
+    title: "Interview Forge Pack",
+    label: "System Design Interview Simulator",
+    description: "Generates production-grade system design interview discussions, tradeoffs, and architecture evaluations.",
+    path: "/packs/interview-pack.json"
+  },
+  {
+    id: "ai_pack",
+    icon: "🤖🔗⚙️",
+    title: "AI Workflow Pack",
+    label: "LLM Pipeline & Agent Orchestration Designer",
+    description: "Designs structured AI workflows, prompt chains, evaluation pipelines, and agent execution systems.",
+    path: "/packs/aiworkflow-pack.json"
   }
 ];
 

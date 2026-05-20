@@ -1,0 +1,26 @@
+{
+  "shortName": "Redis Strategist",
+  "label": "Distributed Cache & Redis Topology Planner",
+  "description": "Designs scalable Redis caching architectures, invalidation strategies, and distributed data access patterns.",
+  "prompt_template": "[SYSTEM ROLE]\nAct as a senior distributed systems engineer specializing in Redis infrastructure.\n\n[OBJECTIVE]\nDesign an optimized Redis strategy for the workload and traffic profile described below.\n\n[APPLICATION DOMAIN]\n{application_domain}\n\n[TRAFFIC CHARACTERISTICS]\n{traffic_profile}\n\n[CACHE OBJECTS / DATA TYPES]\n{cache_entities}\n\n[EXECUTION PRIMITIVES]\n1. Recommend appropriate Redis data structures and key naming conventions.\n2. Suggest eviction, expiration, and invalidation strategies.\n3. Explain horizontal scaling considerations, replication, and failover design.\n4. Identify race conditions, stale-cache risks, and consistency tradeoffs.\n\n[REDIS ARCHITECTURE OUTPUT]:",
+  "fields": [
+    {
+      "id": "application_domain",
+      "label": "Application / Service Domain",
+      "type": "text",
+      "placeholder": "e.g., social media feed system, ecommerce inventory, messaging app"
+    },
+    {
+      "id": "traffic_profile",
+      "label": "Traffic Characteristics",
+      "type": "textarea",
+      "placeholder": "Describe request rate, read/write ratio, peak traffic, latency requirements..."
+    },
+    {
+      "id": "cache_entities",
+      "label": "Cache Entities / Objects",
+      "type": "textarea",
+      "placeholder": "Describe sessions, feeds, notifications, counters, timelines, etc."
+    }
+  ]
+}

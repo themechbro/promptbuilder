@@ -1,0 +1,26 @@
+{
+  "shortName": "Interview Forge",
+  "label": "System Design Interview Simulator",
+  "description": "Generates production-grade system design interview discussions, tradeoffs, and architecture evaluations.",
+  "prompt_template": "[SYSTEM ROLE]\nAct as a senior distributed systems interviewer at a top-tier technology company.\n\n[OBJECTIVE]\nConduct a detailed system design analysis based on the product requirements below.\n\n[SYSTEM TO DESIGN]\n{system_name}\n\n[SCALE REQUIREMENTS]\n{scale_requirements}\n\n[FEATURE REQUIREMENTS]\n{feature_scope}\n\n[EXECUTION PRIMITIVES]\n1. Design high-level and low-level architecture.\n2. Explain database, cache, queue, and storage choices.\n3. Discuss scaling bottlenecks and tradeoffs.\n4. Evaluate reliability, consistency, and fault tolerance.\n\n[SYSTEM DESIGN OUTPUT]:",
+  "fields": [
+    {
+      "id": "system_name",
+      "label": "System / Product",
+      "type": "text",
+      "placeholder": "e.g., URL shortener, YouTube, WhatsApp, Uber"
+    },
+    {
+      "id": "scale_requirements",
+      "label": "Scale Requirements",
+      "type": "textarea",
+      "placeholder": "Describe DAUs, requests/sec, storage growth, global regions..."
+    },
+    {
+      "id": "feature_scope",
+      "label": "Feature Scope",
+      "type": "textarea",
+      "placeholder": "Describe messaging, search, notifications, feeds, uploads..."
+    }
+  ]
+}
