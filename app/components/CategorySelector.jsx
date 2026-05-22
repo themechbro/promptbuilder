@@ -1,4 +1,5 @@
 import { BarChart3, FileSearch, ListFilter, PenLine, ScanSearch, Trash2 } from "lucide-react";
+import localforage from "localforage";
 
 const categoryIcons = {
   summarize: BarChart3,
@@ -15,18 +16,19 @@ export default function CategorySelector({ categories, activeId, onSelect }) {
         const isSelected = activeId === category.id;
         const Icon = categoryIcons[category.id] || ScanSearch;
 
-        const handleInlineDelete = (event, templateId, shortName) => {
+        const handleInlineDelete = async (event, templateId, shortName) => {
           event.stopPropagation();
 
           if (!confirm(`Delete the "${shortName}" custom template?`)) return;
 
-          const existingCustom = JSON.parse(localStorage.getItem("prompt_builder_custom_templates") || "{}");
+          const saved = await localforage.getItem("prompt_builder_custom_templates");
+          const existingCustom = saved ? (typeof saved === "string" ? JSON.parse(saved) : saved) : {};
           delete existingCustom[templateId];
 
           if (Object.keys(existingCustom).length === 0) {
-            localStorage.removeItem("prompt_builder_custom_templates");
+            await localforage.removeItem("prompt_builder_custom_templates");
           } else {
-            localStorage.setItem("prompt_builder_custom_templates", JSON.stringify(existingCustom));
+            await localforage.setItem("prompt_builder_custom_templates", existingCustom);
           }
 
           window.location.reload();

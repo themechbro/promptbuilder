@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import localforage from "localforage";
 import {
   Bot,
   Boxes,
@@ -109,18 +110,19 @@ export default function CommunityHub({ onTemplatesUpdated }) {
   const [isLoading, setIsLoading] = useState(false);
 
   const refreshInstalledStatus = () => {
-    const saved = localStorage.getItem("prompt_builder_custom_templates");
-    if (!saved) {
-      setInstalledPacks({});
-      return;
-    }
-
-    try {
-      setInstalledPacks(JSON.parse(saved));
-    } catch (error) {
-      console.error(error);
-      setInstalledPacks({});
-    }
+    localforage.getItem("prompt_builder_custom_templates").then((saved) => {
+      if (!saved) {
+        setInstalledPacks({});
+        return;
+      }
+      try {
+        const parsed = typeof saved === "string" ? JSON.parse(saved) : saved;
+        setInstalledPacks(parsed);
+      } catch (error) {
+        console.error(error);
+        setInstalledPacks({});
+      }
+    });
   };
 
   useEffect(() => {
@@ -144,7 +146,7 @@ export default function CommunityHub({ onTemplatesUpdated }) {
     }
   };
 
-  const handleInstallPack = (packData) => {
+  const handleInstallPack = async (packData) => {
     const templateId = `custom_${packData.shortName.toLowerCase().replace(/\s+/g, "_")}`;
     const targetPayload = {
       ...packData,
@@ -152,9 +154,10 @@ export default function CommunityHub({ onTemplatesUpdated }) {
       isCustom: true,
     };
 
-    const existingCustom = JSON.parse(localStorage.getItem("prompt_builder_custom_templates") || "{}");
+    const saved = await localforage.getItem("prompt_builder_custom_templates");
+    const existingCustom = saved ? (typeof saved === "string" ? JSON.parse(saved) : saved) : {};
     const updatedCustom = { ...existingCustom, [templateId]: targetPayload };
-    localStorage.setItem("prompt_builder_custom_templates", JSON.stringify(updatedCustom));
+    await localforage.setItem("prompt_builder_custom_templates", updatedCustom);
 
     refreshInstalledStatus();
     setIsModalOpen(false);
