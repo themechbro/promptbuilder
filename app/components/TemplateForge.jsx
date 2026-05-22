@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import localforage from "localforage";
 import {
   AlertCircle,
   CheckCircle2,
@@ -50,18 +51,19 @@ export default function TemplateForge({ onTemplatesUpdated }) {
   const [importSuccess, setImportSuccess] = useState(false);
 
   const loadActiveCustoms = () => {
-    const saved = localStorage.getItem("prompt_builder_custom_templates");
-    if (!saved) {
-      setCustomRegistry({});
-      return;
-    }
-
-    try {
-      setCustomRegistry(JSON.parse(saved));
-    } catch (error) {
-      console.error(error);
-      setCustomRegistry({});
-    }
+    localforage.getItem("prompt_builder_custom_templates").then((saved) => {
+      if (!saved) {
+        setCustomRegistry({});
+        return;
+      }
+      try {
+        const parsed = typeof saved === "string" ? JSON.parse(saved) : saved;
+        setCustomRegistry(parsed);
+      } catch (error) {
+        console.error(error);
+        setCustomRegistry({});
+      }
+    });
   };
 
   useEffect(() => {
@@ -133,7 +135,7 @@ ${dynamicVariableBlocks}
     setObjective("Your task is to...");
   };
 
-  const handleCompileAndSave = () => {
+  const handleCompileAndSave = async () => {
     if (!shortName.trim() || !label.trim()) {
       alert("Please add a short name and a full workflow title before saving.");
       return;
@@ -154,26 +156,28 @@ ${dynamicVariableBlocks}
       fields: fields.map((field) => ({ ...field, id: field.id.trim() })),
     };
 
-    const existingCustom = JSON.parse(localStorage.getItem("prompt_builder_custom_templates") || "{}");
+    const saved = await localforage.getItem("prompt_builder_custom_templates");
+    const existingCustom = saved ? (typeof saved === "string" ? JSON.parse(saved) : saved) : {};
     const updatedCustom = { ...existingCustom, [templateId]: targetCustomPayload };
 
-    localStorage.setItem("prompt_builder_custom_templates", JSON.stringify(updatedCustom));
+    await localforage.setItem("prompt_builder_custom_templates", updatedCustom);
     resetForge();
     loadActiveCustoms();
     alert(`Saved "${targetCustomPayload.label}" to your workspace.`);
     if (onTemplatesUpdated) onTemplatesUpdated();
   };
 
-  const handleDeleteCustomTemplate = (templateId) => {
+  const handleDeleteCustomTemplate = async (templateId) => {
     if (!confirm("Delete this custom template from your workspace?")) return;
 
-    const existingCustom = JSON.parse(localStorage.getItem("prompt_builder_custom_templates") || "{}");
+    const saved = await localforage.getItem("prompt_builder_custom_templates");
+    const existingCustom = saved ? (typeof saved === "string" ? JSON.parse(saved) : saved) : {};
     delete existingCustom[templateId];
 
     if (Object.keys(existingCustom).length === 0) {
-      localStorage.removeItem("prompt_builder_custom_templates");
+      await localforage.removeItem("prompt_builder_custom_templates");
     } else {
-      localStorage.setItem("prompt_builder_custom_templates", JSON.stringify(existingCustom));
+      await localforage.setItem("prompt_builder_custom_templates", existingCustom);
     }
 
     loadActiveCustoms();
@@ -205,7 +209,7 @@ ${dynamicVariableBlocks}
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (readerEvent) => {
+    reader.onload = async (readerEvent) => {
       try {
         const parsed = JSON.parse(readerEvent.target.result);
         if (!parsed.shortName || !parsed.label || !parsed.prompt_template || !parsed.fields) {
@@ -213,11 +217,12 @@ ${dynamicVariableBlocks}
         }
 
         const templateId = `custom_${parsed.shortName.toLowerCase().replace(/\s+/g, "_")}`;
-        const existingCustom = JSON.parse(localStorage.getItem("prompt_builder_custom_templates") || "{}");
+        const saved = await localforage.getItem("prompt_builder_custom_templates");
+        const existingCustom = saved ? (typeof saved === "string" ? JSON.parse(saved) : saved) : {};
 
         existingCustom[templateId] = { ...parsed, id: templateId, isCustom: true };
 
-        localStorage.setItem("prompt_builder_custom_templates", JSON.stringify(existingCustom));
+        await localforage.setItem("prompt_builder_custom_templates", existingCustom);
         setImportSuccess(true);
         loadActiveCustoms();
         if (onTemplatesUpdated) onTemplatesUpdated();

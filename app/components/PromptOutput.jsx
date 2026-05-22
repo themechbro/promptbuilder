@@ -16,6 +16,7 @@ import {
 
 export default function PromptOutput({
   prompt,
+  isJsonMode,
   tokenCount,
   rawContentTokens,
   roughPrompt,
@@ -32,6 +33,7 @@ export default function PromptOutput({
   setOpenaiKey,
   anthropicKey,
   setAnthropicKey,
+  onPersistLocalHistory, //prop hook to save history states up to the root workspace layout
 }) {
   const [copied, setCopied] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
@@ -65,11 +67,19 @@ export default function PromptOutput({
       if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
         event.preventDefault();
 
-        if (activeTab === "sandbox" && executionButtonRef.current && !executionButtonRef.current.disabled) {
+        if (
+          activeTab === "sandbox" &&
+          executionButtonRef.current &&
+          !executionButtonRef.current.disabled
+        ) {
           executionButtonRef.current.click();
         }
 
-        if (activeTab === "template" && copyButtonRef.current && !copyButtonRef.current.disabled) {
+        if (
+          activeTab === "template" &&
+          copyButtonRef.current &&
+          !copyButtonRef.current.disabled
+        ) {
           copyButtonRef.current.click();
         }
       }
@@ -105,7 +115,10 @@ export default function PromptOutput({
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `prompt-${new Date().toISOString().split("T")[0]}.md`);
+      link.setAttribute(
+        "download",
+        `prompt-${new Date().toISOString().split("T")[0]}.md`,
+      );
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -123,9 +136,21 @@ export default function PromptOutput({
   const handleSaveProviderToChain = (provider) => {
     commitChainOutput(provider.output);
     setSavedChainProvider(provider.id);
+
+    // If the workspace has a history logging hook assigned, persist this state node right now
+    if (onPersistLocalHistory) {
+      onPersistLocalHistory(prompt, provider.output);
+    }
   };
 
-  const runProvider = async ({ id, key, setLoading, setOutput, setMetrics, setError }) => {
+  const runProvider = async ({
+    id,
+    key,
+    setLoading,
+    setOutput,
+    setMetrics,
+    setError,
+  }) => {
     if (!key.trim()) return;
 
     setLoading(true);
@@ -138,12 +163,42 @@ export default function PromptOutput({
       const response = await fetch("/api/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: id, prompt, apiKey: key }),
+        body: JSON.stringify({ provider: id, prompt, apiKey: key, isJsonMode }),
       });
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
-      setOutput(data.output);
-      setMetrics(data.metrics);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP Error ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        
+        if (value) {
+          fullText += decoder.decode(value, { stream: true });
+        }
+        if (done) {
+          fullText += decoder.decode(); // flush any remaining characters
+        }
+        
+        if (fullText.includes("__STREAM_METRICS__")) {
+          const [text, metricsRaw] = fullText.split("__STREAM_METRICS__");
+          setOutput(text.trim());
+          try {
+            setMetrics(JSON.parse(metricsRaw));
+          } catch (e) {
+            // JSON might be incomplete if chunked, ignore until next chunk or done
+          }
+        } else {
+          setOutput(fullText);
+        }
+
+        if (done) break;
+      }
     } catch (error) {
       setError(error.message);
     } finally {
@@ -180,6 +235,11 @@ export default function PromptOutput({
         setError: setAnthropicError,
       }),
     ]);
+    // Optional: Log the baseline prompt layout structure to your local history
+    // even before a user picks a specific model chain anchor
+    if (onPersistLocalHistory) {
+      onPersistLocalHistory(prompt, "");
+    }
   };
 
   const renderFormattedPrompt = (text) => {
@@ -187,7 +247,10 @@ export default function PromptOutput({
     return parts.map((part, index) => {
       if (part.startsWith("[") && part.endsWith("]")) {
         return (
-          <span key={index} className="mb-1 mt-4 block border-b border-white/10 pb-1 text-[11px] font-semibold uppercase tracking-wide text-cyan-300">
+          <span
+            key={index}
+            className="mb-1 mt-4 block border-b border-white/10 pb-1 text-[11px] font-semibold uppercase tracking-wide text-cyan-300"
+          >
             {part}
           </span>
         );
@@ -206,20 +269,64 @@ export default function PromptOutput({
     }
   };
 
+  const parseInlineMarkdown = (text) => {
+    if (!text || typeof text !== "string") return text;
+    const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return (
+          <strong key={i} className="font-semibold text-slate-100">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      if (part.startsWith("`") && part.endsWith("`")) {
+        return (
+          <code
+            key={i}
+            className="rounded bg-black/30 px-1 py-0.5 font-mono text-[11px] text-emerald-300"
+          >
+            {part.slice(1, -1)}
+          </code>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
   const renderModelOutput = (value) => {
     const text = normalizeModelOutput(value).trim();
-    if (!text) return <span className="text-slate-600">Run the prompt to see this model response.</span>;
+    if (!text)
+      return (
+        <span className="text-slate-600">
+          Run the prompt to see this model response.
+        </span>
+      );
 
-    if ((text.startsWith("{") && text.endsWith("}")) || (text.startsWith("[") && text.endsWith("]"))) {
+    if (
+      isJsonMode ||
+      (text.startsWith("{") && text.endsWith("}")) ||
+      (text.startsWith("[") && text.endsWith("]")) ||
+      text.startsWith("{") || 
+      text.startsWith("[")
+    ) {
       try {
-        const parsed = JSON.parse(text);
+        if ((text.startsWith("{") && text.endsWith("}")) || (text.startsWith("[") && text.endsWith("]"))) {
+          const parsed = JSON.parse(text);
+          return (
+            <pre className="overflow-x-auto rounded-lg border border-white/10 bg-[#0b1020] p-3 font-mono text-xs leading-relaxed text-emerald-200">
+              {JSON.stringify(parsed, null, 2)}
+            </pre>
+          );
+        }
+        throw new Error("Not fully valid yet");
+      } catch {
+        // Fall back to a pre tag if it's supposed to be JSON but not yet fully parsed (e.g., streaming)
         return (
           <pre className="overflow-x-auto rounded-lg border border-white/10 bg-[#0b1020] p-3 font-mono text-xs leading-relaxed text-emerald-200">
-            {JSON.stringify(parsed, null, 2)}
+            {text}
           </pre>
         );
-      } catch {
-        // Fall back to line formatter below.
       }
     }
 
@@ -243,35 +350,58 @@ export default function PromptOutput({
           index += 1;
         }
         rendered.push(
-          <pre key={`code-${index}`} className="my-3 overflow-x-auto rounded-lg border border-white/10 bg-[#0b1020] p-3 font-mono text-xs leading-relaxed text-emerald-200">
+          <pre
+            key={`code-${index}`}
+            className="my-3 overflow-x-auto rounded-lg border border-white/10 bg-[#0b1020] p-3 font-mono text-xs leading-relaxed text-emerald-200"
+          >
             {codeLines.join("\n")}
-          </pre>
+          </pre>,
         );
         continue;
       }
 
       if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
         const tableLines = [trimmed];
-        while (index + 1 < lines.length && lines[index + 1].trim().startsWith("|")) {
+        while (
+          index + 1 < lines.length &&
+          lines[index + 1].trim().startsWith("|")
+        ) {
           index += 1;
           tableLines.push(lines[index].trim());
         }
 
         const rows = tableLines
-          .filter((tableLine) => !/^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(tableLine))
-          .map((tableLine) => tableLine.split("|").map((cell) => cell.trim()).filter(Boolean));
+          .filter(
+            (tableLine) =>
+              !/^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(tableLine),
+          )
+          .map((tableLine) =>
+            tableLine
+              .split("|")
+              .map((cell) => cell.trim())
+              .filter(Boolean),
+          );
 
         rendered.push(
-          <div key={`table-${index}`} className="my-3 overflow-x-auto rounded-lg border border-white/10">
+          <div
+            key={`table-${index}`}
+            className="my-3 overflow-x-auto rounded-lg border border-white/10"
+          >
             <table className="w-full border-collapse text-left text-xs">
               <tbody>
                 {rows.map((row, rowIndex) => (
-                  <tr key={`${row.join("-")}-${rowIndex}`} className="border-b border-white/10 last:border-b-0">
+                  <tr
+                    key={`${row.join("-")}-${rowIndex}`}
+                    className="border-b border-white/10 last:border-b-0"
+                  >
                     {row.map((cell, cellIndex) => {
                       const Cell = rowIndex === 0 ? "th" : "td";
                       return (
-                        <Cell key={`${cell}-${cellIndex}`} className={`p-2 align-top ${rowIndex === 0 ? "bg-cyan-300/10 font-semibold text-cyan-100" : "text-slate-300"}`}>
-                          {cell}
+                        <Cell
+                          key={`${cell}-${cellIndex}`}
+                          className={`p-2 align-top ${rowIndex === 0 ? "bg-cyan-300/10 font-semibold text-cyan-100" : "text-slate-300"}`}
+                        >
+                          {parseInlineMarkdown(cell)}
                         </Cell>
                       );
                     })}
@@ -279,26 +409,32 @@ export default function PromptOutput({
                 ))}
               </tbody>
             </table>
-          </div>
+          </div>,
         );
         continue;
       }
 
       if (/^#{1,4}\s+/.test(trimmed)) {
         rendered.push(
-          <h4 key={`heading-${index}`} className="mt-4 text-sm font-semibold text-cyan-100 first:mt-0">
-            {trimmed.replace(/^#{1,4}\s+/, "")}
-          </h4>
+          <h4
+            key={`heading-${index}`}
+            className="mt-4 text-sm font-semibold text-cyan-100 first:mt-0"
+          >
+            {parseInlineMarkdown(trimmed.replace(/^#{1,4}\s+/, ""))}
+          </h4>,
         );
         continue;
       }
 
       if (/^(\*|-|•)\s+/.test(trimmed)) {
         rendered.push(
-          <div key={`bullet-${index}`} className="flex gap-2 text-sm leading-relaxed text-slate-300">
+          <div
+            key={`bullet-${index}`}
+            className="flex gap-2 text-sm leading-relaxed text-slate-300"
+          >
             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300/70" />
-            <span>{trimmed.replace(/^(\*|-|•)\s+/, "")}</span>
-          </div>
+            <span>{parseInlineMarkdown(trimmed.replace(/^(\*|-|•)\s+/, ""))}</span>
+          </div>,
         );
         continue;
       }
@@ -306,18 +442,24 @@ export default function PromptOutput({
       if (/^\d+\.\s+/.test(trimmed)) {
         const [number] = trimmed.match(/^\d+/) || [""];
         rendered.push(
-          <div key={`number-${index}`} className="flex gap-2 text-sm leading-relaxed text-slate-300">
+          <div
+            key={`number-${index}`}
+            className="flex gap-2 text-sm leading-relaxed text-slate-300"
+          >
             <span className="shrink-0 text-cyan-300">{number}.</span>
-            <span>{trimmed.replace(/^\d+\.\s+/, "")}</span>
-          </div>
+            <span>{parseInlineMarkdown(trimmed.replace(/^\d+\.\s+/, ""))}</span>
+          </div>,
         );
         continue;
       }
 
       rendered.push(
-        <p key={`paragraph-${index}`} className="text-sm leading-relaxed text-slate-300">
-          {trimmed}
-        </p>
+        <p
+          key={`paragraph-${index}`}
+          className="text-sm leading-relaxed text-slate-300"
+        >
+          {parseInlineMarkdown(trimmed)}
+        </p>,
       );
     }
 
@@ -378,7 +520,9 @@ export default function PromptOutput({
                   <FileText className="h-3.5 w-3.5" aria-hidden="true" />
                   Output
                 </p>
-                <h2 className="mt-1 text-lg font-semibold text-white">Your compiled prompt</h2>
+                <h2 className="mt-1 text-lg font-semibold text-white">
+                  Your compiled prompt
+                </h2>
               </div>
               <span className="rounded-md border border-white/10 bg-[#0f172a] px-2.5 py-1 text-xs text-slate-400">
                 <span className="flex items-center gap-1.5">
@@ -387,11 +531,16 @@ export default function PromptOutput({
                 </span>
               </span>
             </div>
-            <p className="mt-1 text-sm text-slate-500">Copy it, export it, or test it in the sandbox.</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Copy it, export it, or test it in the sandbox.
+            </p>
           </div>
 
           <div className="rounded-xl border border-white/10 bg-[#0f172a]/60 p-4">
-            <label htmlFor="rough-prompt-input" className="mb-2 block text-sm font-medium text-slate-200">
+            <label
+              htmlFor="rough-prompt-input"
+              className="mb-2 block text-sm font-medium text-slate-200"
+            >
               Optional baseline prompt
             </label>
             <textarea
@@ -407,16 +556,31 @@ export default function PromptOutput({
           {hasBaselinePrompt && (
             <div className="grid grid-cols-3 gap-2">
               <div className="rounded-lg border border-white/10 bg-[#0f172a]/70 p-3 text-center">
-                <span className="flex items-center justify-center gap-1 text-xs text-slate-500"><FileText className="h-3.5 w-3.5" aria-hidden="true" />Source</span>
-                <strong className="mt-1 block text-slate-200">{rawContentTokens}</strong>
+                <span className="flex items-center justify-center gap-1 text-xs text-slate-500">
+                  <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+                  Source
+                </span>
+                <strong className="mt-1 block text-slate-200">
+                  {rawContentTokens}
+                </strong>
               </div>
               <div className="rounded-lg border border-white/10 bg-[#0f172a]/70 p-3 text-center">
-                <span className="flex items-center justify-center gap-1 text-xs text-slate-500"><Clipboard className="h-3.5 w-3.5" aria-hidden="true" />Compiled</span>
-                <strong className="mt-1 block text-cyan-200">{tokenCount}</strong>
+                <span className="flex items-center justify-center gap-1 text-xs text-slate-500">
+                  <Clipboard className="h-3.5 w-3.5" aria-hidden="true" />
+                  Compiled
+                </span>
+                <strong className="mt-1 block text-cyan-200">
+                  {tokenCount}
+                </strong>
               </div>
               <div className="rounded-lg border border-white/10 bg-[#0f172a]/70 p-3 text-center">
-                <span className="flex items-center justify-center gap-1 text-xs text-slate-500"><Gauge className="h-3.5 w-3.5" aria-hidden="true" />Difference</span>
-                <strong className={`mt-1 block ${roughTokenCount - tokenCount >= 0 ? "text-emerald-300" : "text-amber-300"}`}>
+                <span className="flex items-center justify-center gap-1 text-xs text-slate-500">
+                  <Gauge className="h-3.5 w-3.5" aria-hidden="true" />
+                  Difference
+                </span>
+                <strong
+                  className={`mt-1 block ${roughTokenCount - tokenCount >= 0 ? "text-emerald-300" : "text-amber-300"}`}
+                >
                   {roughTokenCount - tokenCount}
                 </strong>
               </div>
@@ -433,7 +597,9 @@ export default function PromptOutput({
                     type="button"
                     onClick={() => onRestoreVersion(version)}
                     className={`rounded-md px-2 py-1 transition-all ${
-                      prompt === version ? "bg-cyan-300/15 text-cyan-200" : "text-slate-500 hover:text-slate-200"
+                      prompt === version
+                        ? "bg-cyan-300/15 text-cyan-200"
+                        : "text-slate-500 hover:text-slate-200"
                     }`}
                   >
                     v{versions.length - index}
@@ -466,7 +632,11 @@ export default function PromptOutput({
               }`}
             >
               <span className="inline-flex items-center gap-2">
-                {copied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Clipboard className="h-4 w-4" aria-hidden="true" />}
+                {copied ? (
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <Clipboard className="h-4 w-4" aria-hidden="true" />
+                )}
                 {copied ? "Copied" : "Copy prompt"}
               </span>
               <kbd className="ml-2 hidden rounded border border-white/10 bg-[#0b1020] px-1.5 py-0.5 text-[10px] font-normal text-slate-500 sm:inline-block">
@@ -500,8 +670,13 @@ export default function PromptOutput({
                 <TestTube2 className="h-3.5 w-3.5" aria-hidden="true" />
                 Sandbox
               </p>
-              <h2 className="mt-1 text-lg font-semibold text-white">Run the prompt against your models</h2>
-              <p className="mt-1 text-sm text-slate-500">After the run, choose which model output should feed the next step.</p>
+              <h2 className="mt-1 text-lg font-semibold text-white">
+                Run the prompt against your models
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                After the run, choose which model output should feed the next
+                step.
+              </p>
             </div>
             <button
               type="button"
@@ -519,25 +694,58 @@ export default function PromptOutput({
             <div className="max-w-2xl rounded-xl border border-white/10 bg-[#0f172a]/70 p-4">
               <div className="mb-3">
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
-                  <KeyRound className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                  <KeyRound
+                    className="h-4 w-4 text-cyan-300"
+                    aria-hidden="true"
+                  />
                   API keys
                 </h3>
-                <p className="mt-0.5 text-xs text-slate-500">Stored only in this browser session.</p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Stored only in this browser session.
+                </p>
               </div>
               <div className="grid gap-3">
                 <label className="space-y-1.5">
-                  <span className="text-xs font-medium text-slate-400">Gemini key</span>
-                  <input type="password" value={geminiKey} onChange={(event) => setGeminiKey(event.target.value)} placeholder="Paste Gemini API key" className="w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-300/60" />
+                  <span className="text-xs font-medium text-slate-400">
+                    Gemini key
+                  </span>
+                  <input
+                    type="password"
+                    value={geminiKey}
+                    onChange={(event) => setGeminiKey(event.target.value)}
+                    placeholder="Paste Gemini API key"
+                    className="w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-300/60"
+                  />
                 </label>
                 <label className="space-y-1.5">
-                  <span className="text-xs font-medium text-slate-400">OpenAI key</span>
-                  <input type="password" value={openaiKey} onChange={(event) => setOpenaiKey(event.target.value)} placeholder="Optional OpenAI API key" className="w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-300/60" />
+                  <span className="text-xs font-medium text-slate-400">
+                    OpenAI key
+                  </span>
+                  <input
+                    type="password"
+                    value={openaiKey}
+                    onChange={(event) => setOpenaiKey(event.target.value)}
+                    placeholder="Optional OpenAI API key"
+                    className="w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-300/60"
+                  />
                 </label>
                 <label className="space-y-1.5">
-                  <span className="text-xs font-medium text-slate-400">Anthropic key</span>
-                  <input type="password" value={anthropicKey} onChange={(event) => setAnthropicKey(event.target.value)} placeholder="Optional Anthropic API key" className="w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-300/60" />
+                  <span className="text-xs font-medium text-slate-400">
+                    Anthropic key
+                  </span>
+                  <input
+                    type="password"
+                    value={anthropicKey}
+                    onChange={(event) => setAnthropicKey(event.target.value)}
+                    placeholder="Optional Anthropic API key"
+                    className="w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-cyan-300/60"
+                  />
                 </label>
-                <button type="button" onClick={handleSaveKeys} className="rounded-lg border border-cyan-300/40 bg-cyan-300/15 px-4 py-2 text-sm font-semibold text-cyan-100 transition-all hover:bg-cyan-300/25">
+                <button
+                  type="button"
+                  onClick={handleSaveKeys}
+                  className="rounded-lg border border-cyan-300/40 bg-cyan-300/15 px-4 py-2 text-sm font-semibold text-cyan-100 transition-all hover:bg-cyan-300/25"
+                >
                   <span className="flex items-center justify-center gap-2">
                     <Save className="h-4 w-4" aria-hidden="true" />
                     Save keys
@@ -549,34 +757,55 @@ export default function PromptOutput({
 
           {!hasAnyKey ? (
             <div className="flex min-h-72 flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-[#0f172a]/40 p-6 text-center">
-              <KeyRound className="mb-3 h-8 w-8 text-slate-500" aria-hidden="true" />
-              <span className="text-base font-semibold text-slate-300">Add at least one API key to run this prompt.</span>
-              <span className="mt-1 max-w-md text-sm text-slate-500">Gemini is enough to get started. OpenAI and Anthropic are optional comparison panels.</span>
+              <KeyRound
+                className="mb-3 h-8 w-8 text-slate-500"
+                aria-hidden="true"
+              />
+              <span className="text-base font-semibold text-slate-300">
+                Add at least one API key to run this prompt.
+              </span>
+              <span className="mt-1 max-w-md text-sm text-slate-500">
+                Gemini is enough to get started. OpenAI and Anthropic are
+                optional comparison panels.
+              </span>
             </div>
           ) : (
             <div className={`grid ${gridLayoutClass} flex-grow gap-4`}>
               {configuredProviders.map((provider) => (
-                <div key={provider.id} className="flex min-h-[380px] flex-col rounded-xl border border-white/10 bg-[#0f172a]/70 p-4">
+                <div
+                  key={provider.id}
+                  className="flex min-h-[380px] flex-col rounded-xl border border-white/10 bg-[#0f172a]/70 p-4"
+                >
                   <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
-                    <span className={`flex items-center gap-2 text-sm font-semibold ${provider.accent}`}>
+                    <span
+                      className={`flex items-center gap-2 text-sm font-semibold ${provider.accent}`}
+                    >
                       <Bot className="h-4 w-4" aria-hidden="true" />
-                      <span className={`h-2 w-2 rounded-full ${provider.dot}`} />
+                      <span
+                        className={`h-2 w-2 rounded-full ${provider.dot}`}
+                      />
                       {provider.name}
                     </span>
                     {provider.metrics && (
                       <span className="rounded-md border border-white/10 bg-[#0b1020] px-2 py-1 text-[11px] text-slate-500">
-                        {provider.metrics.inputTokens} in / {provider.metrics.outputTokens} out
+                        {provider.metrics.inputTokens} in /{" "}
+                        {provider.metrics.outputTokens} out
                       </span>
                     )}
                   </div>
                   <div className="flex-grow overflow-y-auto pt-3 text-slate-300">
-                    {provider.loading ? (
+                    {provider.loading && !provider.output ? (
                       <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-slate-500">
-                        <Loader2 className={`h-5 w-5 animate-spin ${provider.id === "gemini" ? "text-sky-300" : provider.id === "openai" ? "text-emerald-300" : "text-amber-300"}`} aria-hidden="true" />
+                        <Loader2
+                          className={`h-5 w-5 animate-spin ${provider.id === "gemini" ? "text-sky-300" : provider.id === "openai" ? "text-emerald-300" : "text-amber-300"}`}
+                          aria-hidden="true"
+                        />
                         Running...
                       </div>
                     ) : provider.error ? (
-                      <span className="text-sm text-rose-300">Error: {provider.error}</span>
+                      <span className="text-sm text-rose-300">
+                        Error: {provider.error}
+                      </span>
                     ) : (
                       renderModelOutput(provider.output)
                     )}
@@ -597,7 +826,9 @@ export default function PromptOutput({
                         ) : (
                           <Save className="h-4 w-4" aria-hidden="true" />
                         )}
-                        {savedChainProvider === provider.id ? "Saved to chain" : "Save to chain"}
+                        {savedChainProvider === provider.id
+                          ? "Saved to chain"
+                          : "Save to chain"}
                       </span>
                     </button>
                   )}
@@ -620,8 +851,16 @@ export default function PromptOutput({
             }`}
           >
             <span className="inline-flex items-center gap-2">
-              {isAnyModelLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Play className="h-4 w-4" aria-hidden="true" />}
-              {isAnyModelLoading ? "Running models..." : !hasAnyKey ? "Add keys to run" : "Run prompt"}
+              {isAnyModelLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Play className="h-4 w-4" aria-hidden="true" />
+              )}
+              {isAnyModelLoading
+                ? "Running models..."
+                : !hasAnyKey
+                  ? "Add keys to run"
+                  : "Run prompt"}
             </span>
             {!isAnyModelLoading && hasAnyKey && (
               <kbd className="ml-2 hidden rounded border border-white/10 bg-[#0b1020] px-1.5 py-0.5 text-[10px] font-normal text-slate-500 sm:inline-block">

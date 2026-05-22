@@ -1,4 +1,10 @@
+import { streamText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createAnthropic } from '@ai-sdk/anthropic';
 import { NextResponse } from "next/server";
+
+export const runtime = 'edge';
 
 // Maximum prompt length to prevent API credit abuse
 const MAX_PROMPT_LENGTH = 50000;
@@ -42,117 +48,10 @@ function validateRequest(provider, prompt, apiKey) {
   return null;
 }
 
-/**
- * Shared HTTP error handler for provider API responses.
- * Catches non-OK responses that don't carry a structured error body.
- */
-async function handleProviderResponse(response) {
-  const data = await response.json();
-
-  if (!response.ok) {
-    const message =
-      data?.error?.message ||
-      data?.error ||
-      `Provider returned HTTP ${response.status}`;
-    throw new Error(message);
-  }
-
-  return data;
-}
-
-// --- GEMINI PIPELINE ---
-async function callGemini(prompt, apiKey) {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2 },
-      }),
-    }
-  );
-
-  const data = await handleProviderResponse(response);
-
-  return {
-    output: data.candidates[0].content.parts[0].text,
-    metrics: {
-      inputTokens: data.usageMetadata.promptTokenCount,
-      outputTokens: data.usageMetadata.candidatesTokenCount,
-      totalTokens: data.usageMetadata.totalTokenCount,
-    },
-  };
-}
-
-// --- OPENAI PIPELINE ---
-async function callOpenAI(prompt, apiKey) {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.2,
-    }),
-  });
-
-  const data = await handleProviderResponse(response);
-
-  return {
-    output: data.choices[0].message.content,
-    metrics: {
-      inputTokens: data.usage.prompt_tokens,
-      outputTokens: data.usage.completion_tokens,
-      totalTokens: data.usage.total_tokens,
-    },
-  };
-}
-
-// --- ANTHROPIC CLAUDE PIPELINE ---
-async function callAnthropic(prompt, apiKey) {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 2000,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.2,
-    }),
-  });
-
-  const data = await handleProviderResponse(response);
-
-  return {
-    output: data.content[0].text,
-    metrics: {
-      inputTokens: data.usage.input_tokens,
-      outputTokens: data.usage.output_tokens,
-      totalTokens: data.usage.input_tokens + data.usage.output_tokens,
-    },
-  };
-}
-
-// --- PROVIDER ROUTER ---
-const PROVIDERS = {
-  gemini: callGemini,
-  openai: callOpenAI,
-  anthropic: callAnthropic,
-};
-
 // --- MAIN HANDLER ---
 export async function POST(request) {
   try {
-    const { provider, prompt, apiKey } = await request.json();
+    const { provider, prompt, apiKey, isJsonMode } = await request.json();
 
     // Validate before touching any external API
     const validationError = validateRequest(provider, prompt, apiKey);
@@ -160,10 +59,55 @@ export async function POST(request) {
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
-    const callProvider = PROVIDERS[provider];
-    const result = await callProvider(prompt.trim(), apiKey.trim());
+    let model;
+    if (provider === 'gemini') {
+      const google = createGoogleGenerativeAI({ apiKey });
+      model = google('gemini-3.1-flash-lite');
+    } else if (provider === 'openai') {
+      const openai = createOpenAI({ apiKey });
+      model = openai('gpt-4o-mini');
+    } else if (provider === 'anthropic') {
+      const anthropic = createAnthropic({ apiKey });
+      model = anthropic('claude-haiku-4-5-20251001');
+    } else {
+      return NextResponse.json({ error: "Unsupported provider" }, { status: 400 });
+    }
 
-    return NextResponse.json(result);
+    const result = streamText({
+      model,
+      system: isJsonMode ? "You must return your output as a valid JSON object. Do not use markdown wrappers like ```json" : undefined,
+      prompt: prompt.trim(),
+      temperature: 0.2,
+      maxTokens: 2000,
+    });
+
+    // Custom stream format: send text chunks, then a final special string with metrics
+    // This allows the frontend to stay simple using native fetch without ai-sdk hooks
+    const encoder = new TextEncoder();
+    const customStream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of result.textStream) {
+            controller.enqueue(encoder.encode(chunk));
+          }
+          const usage = await result.usage;
+          console.log("AI SDK Usage Object:", usage); // <-- ADDED LOG
+          const metricsStr = `\n\n__STREAM_METRICS__${JSON.stringify({
+            inputTokens: usage?.promptTokens || usage?.inputTokens || 0,
+            outputTokens: usage?.completionTokens || usage?.outputTokens || 0,
+            totalTokens: usage?.totalTokens || 0,
+          })}`;
+          controller.enqueue(encoder.encode(metricsStr));
+          controller.close();
+        } catch (err) {
+          controller.error(err);
+        }
+      }
+    });
+
+    return new Response(customStream, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
   } catch (error) {
     console.error("Proxy execution error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
