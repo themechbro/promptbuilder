@@ -14,8 +14,14 @@ export default function HomePage() {
     const parseDevice = () => {
       if (typeof window === "undefined") return "Desktop";
       const ua = window.navigator.userAgent;
-      if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) return "Tablet";
-      if (/Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/i.test(ua)) return "Mobile";
+      if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua))
+        return "Tablet";
+      if (
+        /Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/i.test(
+          ua,
+        )
+      )
+        return "Mobile";
       return "Desktop";
     };
 
@@ -37,12 +43,14 @@ export default function HomePage() {
       });
 
       // Execute non-blocking beacon stream to avoid impacting main browser layout threads
-      fetch("/api/track", {
+      fetch("https://api-gateway-vv0h.onrender.com/api/track", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: payload,
         keepalive: true, // Crucial parameter to maintain payload continuity post-tab eviction
-      }).catch((err) => console.warn("Analytics telemetry transmission omitted:", err));
+      }).catch((err) =>
+        console.warn("Analytics telemetry transmission omitted:", err),
+      );
     };
 
     // 4. Register structural state lifecycle listeners
