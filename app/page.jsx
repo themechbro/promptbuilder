@@ -43,11 +43,11 @@ export default function HomePage() {
       });
 
       // Execute non-blocking beacon stream to avoid impacting main browser layout threads
-      fetch("https://api-gateway-vv0h.onrender.com/api/track", {
+      fetch("/api/track", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: payload,
-        // keepalive: true, // Crucial parameter to maintain payload continuity post-tab eviction
+        keepalive: true, // Crucial parameter to maintain payload continuity post-tab eviction
       }).catch((err) =>
         console.warn("Analytics telemetry transmission omitted:", err),
       );
