@@ -3,6 +3,7 @@ import "./globals.css";
 import Script from "next/script";
 import Link from "next/link";
 import NavBar from "./components/NavBar";
+import Footer from "./components/footer";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -61,6 +62,7 @@ export default function RootLayout({ children }) {
 
         {/* Page Content */}
         <main className="flex-1 flex flex-col">{children}</main>
+        <Footer />
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
           strategy="afterInteractive"
