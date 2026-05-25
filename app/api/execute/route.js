@@ -1,10 +1,10 @@
-import { streamText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { createAnthropic } from '@ai-sdk/anthropic';
+import { streamText } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { NextResponse } from "next/server";
 
-export const runtime = 'edge';
+export const runtime = "edge";
 
 // Maximum prompt length to prevent API credit abuse
 const MAX_PROMPT_LENGTH = 50000;
@@ -20,7 +20,45 @@ const API_KEY_VALIDATORS = {
  * Validates the incoming request payload before touching any external API.
  * Returns an error string if invalid, null if valid.
  */
-function validateRequest(provider, prompt, apiKey) {
+// function validateRequest(provider, prompt, apiKey) {
+//   if (!provider || typeof provider !== "string") {
+//     return "Provider is required.";
+//   }
+
+//   if (!API_KEY_VALIDATORS[provider]) {
+//     return `Unsupported provider: ${provider}`;
+//   }
+
+//   if (!apiKey || typeof apiKey !== "string" || apiKey.trim() === "") {
+//     return "API key is required.";
+//   }
+
+//   if (!API_KEY_VALIDATORS[provider](apiKey.trim())) {
+//     return `Invalid API key format for provider: ${provider}`;
+//   }
+
+//   if (!prompt || typeof prompt !== "string" || prompt.trim() === "") {
+//     return "Prompt is required.";
+//   }
+
+//   if (prompt.length > MAX_PROMPT_LENGTH) {
+//     return `Prompt exceeds the maximum allowed length of ${MAX_PROMPT_LENGTH} characters.`;
+//   }
+//   if (
+//     !messages &&
+//     (!prompt || typeof prompt !== "string" || prompt.trim() === "")
+//   ) {
+//     return "Prompt is required.";
+//   }
+//   if (!messages && prompt.length > MAX_PROMPT_LENGTH) {
+//     return `Prompt exceeds the maximum allowed length of ${MAX_PROMPT_LENGTH} characters.`;
+//   }
+//   return null;
+// }
+
+// --- MAIN HANDLER ---
+
+function validateRequest(provider, prompt, apiKey, messages) {
   if (!provider || typeof provider !== "string") {
     return "Provider is required.";
   }
@@ -37,50 +75,62 @@ function validateRequest(provider, prompt, apiKey) {
     return `Invalid API key format for provider: ${provider}`;
   }
 
-  if (!prompt || typeof prompt !== "string" || prompt.trim() === "") {
+  // Accept either messages array or prompt string
+  if (
+    !messages &&
+    (!prompt || typeof prompt !== "string" || prompt.trim() === "")
+  ) {
     return "Prompt is required.";
   }
 
-  if (prompt.length > MAX_PROMPT_LENGTH) {
+  if (!messages && prompt.length > MAX_PROMPT_LENGTH) {
     return `Prompt exceeds the maximum allowed length of ${MAX_PROMPT_LENGTH} characters.`;
   }
 
   return null;
 }
 
-// --- MAIN HANDLER ---
 export async function POST(request) {
   try {
-    const { provider, prompt, apiKey, isJsonMode } = await request.json();
-
+    const { provider, prompt, apiKey, isJsonMode, messages } =
+      await request.json();
     // Validate before touching any external API
-    const validationError = validateRequest(provider, prompt, apiKey);
+    const validationError = validateRequest(provider, prompt, apiKey, messages);
+
     if (validationError) {
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
     let model;
-    if (provider === 'gemini') {
+    if (provider === "gemini") {
       const google = createGoogleGenerativeAI({ apiKey });
-      model = google('gemini-3.1-flash-lite');
-    } else if (provider === 'openai') {
+      model = google("gemini-3.1-flash-lite");
+    } else if (provider === "openai") {
       const openai = createOpenAI({ apiKey });
-      model = openai('gpt-4o-mini');
-    } else if (provider === 'anthropic') {
+      model = openai("gpt-4o-mini");
+    } else if (provider === "anthropic") {
       const anthropic = createAnthropic({ apiKey });
-      model = anthropic('claude-haiku-4-5-20251001');
+      model = anthropic("claude-haiku-4-5-20251001");
     } else {
-      return NextResponse.json({ error: "Unsupported provider" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Unsupported provider" },
+        { status: 400 },
+      );
     }
 
     const result = streamText({
       model,
-      system: isJsonMode ? "You must return your output as a valid JSON object. Do not use markdown wrappers like ```json" : undefined,
-      prompt: prompt.trim(),
+      ...(messages
+        ? { messages }
+        : {
+            system: isJsonMode
+              ? "You must return your output as a valid JSON object..."
+              : undefined,
+            prompt: prompt.trim(),
+          }),
       temperature: 0.2,
       maxTokens: 2000,
     });
-
     // Custom stream format: send text chunks, then a final special string with metrics
     // This allows the frontend to stay simple using native fetch without ai-sdk hooks
     const encoder = new TextEncoder();
@@ -102,11 +152,11 @@ export async function POST(request) {
         } catch (err) {
           controller.error(err);
         }
-      }
+      },
     });
 
     return new Response(customStream, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
   } catch (error) {
     console.error("Proxy execution error:", error.message);

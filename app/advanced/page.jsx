@@ -1,11 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { compilePromptKitBlueprint } from "@/utils/promptCompiler";
 import CreateComponentModal from "../components/CreateComponentModal";
-import { Plus, Copy, Download, Check, ListRestart } from "lucide-react";
+import {
+  Plus,
+  Copy,
+  Download,
+  Check,
+  ListRestart,
+  Play,
+  Send,
+  Loader2,
+  X,
+} from "lucide-react";
 import SelectComponentModal from "../components/SelectComponentModal";
 import localforage from "localforage";
+import ReactMarkdown from "react-markdown";
 
 export default function AdvancedStudio() {
   const [template, setTemplate] = useState("");
@@ -29,6 +40,22 @@ export default function AdvancedStudio() {
   const [activeRightTab, setActiveRightTab] = useState("output");
   const [history, setHistory] = useState([]);
   const [promptVersions, setPromptVersions] = useState({});
+
+  // Sandbox States
+  const [selectedModel, setSelectedModel] = useState("gemini");
+  const [apiKeys, setApiKeys] = useState({
+    gemini: "",
+    openai: "",
+    anthropic: "",
+  });
+  const [conversation, setConversation] = useState([]);
+  const [userInput, setUserInput] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingText, setStreamingText] = useState("");
+  const [metrics, setMetrics] = useState(null);
+  const [chatSessions, setChatSessions] = useState([]);
+  const [activeChatId, setActiveChatId] = useState(null);
+  const conversationEndRef = useRef(null);
 
   const handleCompile = () => {
     try {
@@ -137,11 +164,276 @@ export default function AdvancedStudio() {
     setError(null);
   };
 
+  const handleSaveChatSession = (updatedConversation) => {
+    if (!updatedConversation.length || !compiledOutput) return;
+
+    setChatSessions((prev) => {
+      // Update existing session or create new one
+      const existingIndex = prev.findIndex((s) => s.id === activeChatId);
+
+      if (existingIndex !== -1) {
+        const updated = [...prev];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          conversation: updatedConversation,
+          updatedAt: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        };
+        localforage.setItem("prompt_builder_advanced_chats", updated);
+        return updated;
+      }
+
+      const newSession = {
+        id: activeChatId || crypto.randomUUID(),
+        title: selectedTemplate?.name || "Custom Session",
+        model: selectedModel,
+        persona: selectedPersona?.name || null,
+        protocol: selectedProtocol?.name || null,
+        format: selectedFormat?.name || null,
+        compiledOutput: compiledOutput,
+        conversation: updatedConversation,
+        createdAt: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        updatedAt: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+
+      if (!activeChatId) setActiveChatId(newSession.id);
+      const updated = [newSession, ...prev].slice(0, 20);
+      localforage.setItem("prompt_builder_advanced_chats", updated);
+      return updated;
+    });
+  };
+
+  // Sandbox
+  const handleSend = async (isFirstMessage = false) => {
+    const currentKey = apiKeys[selectedModel];
+    if (!currentKey?.trim()) return;
+
+    const messageToSend = isFirstMessage ? null : userInput;
+    if (!isFirstMessage && !messageToSend?.trim()) return;
+
+    // Build messages array
+    let messages;
+    if (isFirstMessage) {
+      messages = compiledOutput;
+      setConversation([]);
+    } else {
+      messages = [
+        ...compiledOutput,
+        ...conversation.map((m) => ({ role: m.role, content: m.content })),
+        { role: "user", content: userInput },
+      ];
+      setConversation((prev) => [
+        ...prev,
+        { role: "user", content: userInput },
+      ]);
+      setUserInput("");
+    }
+
+    setIsStreaming(true);
+    setStreamingText("");
+    setMetrics(null);
+
+    try {
+      const response = await fetch("/api/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: selectedModel,
+          apiKey: currentKey.trim(),
+          messages,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        setConversation((prev) => [
+          ...prev,
+          { role: "assistant", content: `Error: ${err.error}` },
+        ]);
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+
+        if (chunk.includes("__STREAM_METRICS__")) {
+          const parts = chunk.split("__STREAM_METRICS__");
+          fullText += parts[0];
+          setStreamingText(fullText);
+          try {
+            setMetrics(JSON.parse(parts[1]));
+          } catch {}
+        } else {
+          fullText += chunk;
+          setStreamingText(fullText);
+        }
+      }
+
+      setConversation((prev) => {
+        const updated = [...prev, { role: "assistant", content: fullText }];
+        handleSaveChatSession(updated); // add this
+        return updated;
+      });
+      setStreamingText("");
+    } catch (err) {
+      setConversation((prev) => [
+        ...prev,
+        { role: "assistant", content: `Error: ${err.message}` },
+      ]);
+    } finally {
+      setIsStreaming(false);
+    }
+  };
+
+  const handleNewChat = () => {
+    setConversation([]);
+    setActiveChatId(crypto.randomUUID());
+    setStreamingText("");
+    setMetrics(null);
+    setUserInput("");
+  };
+
+  const handleResumeChat = (session) => {
+    setCompiledOutput(session.compiledOutput);
+    setConversation(session.conversation);
+    setSelectedModel(session.model);
+    setActiveChatId(session.id);
+    setActiveRightTab("run");
+  };
+
+  const handleDeleteChat = (sessionId, e) => {
+    e.stopPropagation();
+    setChatSessions((prev) => {
+      const updated = prev.filter((s) => s.id !== sessionId);
+      localforage.setItem("prompt_builder_advanced_chats", updated);
+      return updated;
+    });
+    if (activeChatId === sessionId) {
+      setActiveChatId(null);
+      setConversation([]);
+    }
+  };
+
   useEffect(() => {
     localforage.getItem("prompt_builder_advanced_history").then((saved) => {
       if (saved) setHistory(saved);
     });
   }, []);
+
+  // Sandbox
+  useEffect(() => {
+    setApiKeys({
+      gemini: sessionStorage.getItem("sandbox_sk_gemini") || "",
+      openai: sessionStorage.getItem("sandbox_sk_openai") || "",
+      anthropic: sessionStorage.getItem("sandbox_sk_anthropic") || "",
+    });
+  }, []);
+  useEffect(() => {
+    localforage.getItem("prompt_builder_advanced_chats").then((saved) => {
+      if (saved) setChatSessions(saved);
+    });
+    // existing history load
+    localforage.getItem("prompt_builder_advanced_history").then((saved) => {
+      if (saved) setHistory(saved);
+    });
+    // existing api keys load
+    setApiKeys({
+      gemini: sessionStorage.getItem("sandbox_sk_gemini") || "",
+      openai: sessionStorage.getItem("sandbox_sk_openai") || "",
+      anthropic: sessionStorage.getItem("sandbox_sk_anthropic") || "",
+    });
+  }, []);
+  useEffect(() => {
+    conversationEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [conversation, streamingText]);
+
+  const MODEL_CONFIG = {
+    gemini: { label: "Gemini", storageKey: "sandbox_sk_gemini" },
+    openai: { label: "GPT-4o Mini", storageKey: "sandbox_sk_openai" },
+    anthropic: { label: "Claude Haiku", storageKey: "sandbox_sk_anthropic" },
+  };
+
+  const MarkdownComponents = {
+    h1: ({ children }) => (
+      <h1 className="text-slate-200 font-mono text-sm font-bold mt-3 mb-1">
+        {children}
+      </h1>
+    ),
+    h2: ({ children }) => (
+      <h2 className="text-slate-200 font-mono text-xs font-bold mt-3 mb-1">
+        {children}
+      </h2>
+    ),
+    h3: ({ children }) => (
+      <h3 className="text-slate-300 font-mono text-xs font-semibold mt-2 mb-1">
+        {children}
+      </h3>
+    ),
+    p: ({ children }) => (
+      <p className="text-slate-300 text-xs leading-relaxed mb-2">{children}</p>
+    ),
+    strong: ({ children }) => (
+      <strong className="text-slate-100 font-semibold">{children}</strong>
+    ),
+    ul: ({ children }) => (
+      <ul className="text-slate-300 text-xs list-disc list-inside mb-2 space-y-1">
+        {children}
+      </ul>
+    ),
+    ol: ({ children }) => (
+      <ol className="text-slate-300 text-xs list-decimal list-inside mb-2 space-y-1">
+        {children}
+      </ol>
+    ),
+    li: ({ children }) => <li className="text-slate-300">{children}</li>,
+    code: ({ inline, children }) =>
+      inline ? (
+        <code className="text-indigo-300 bg-slate-800 px-1 py-0.5 rounded text-xs font-mono">
+          {children}
+        </code>
+      ) : (
+        <code className="block bg-slate-800 border border-slate-700 rounded p-2 text-xs font-mono text-slate-300 overflow-x-auto my-2">
+          {children}
+        </code>
+      ),
+    pre: ({ children }) => (
+      <pre className="bg-slate-800 border border-slate-700 rounded p-2 overflow-x-auto my-2">
+        {children}
+      </pre>
+    ),
+    table: ({ children }) => (
+      <table className="w-full text-xs border-collapse my-2">{children}</table>
+    ),
+    th: ({ children }) => (
+      <th className="text-slate-200 border border-slate-700 px-2 py-1 text-left font-mono">
+        {children}
+      </th>
+    ),
+    td: ({ children }) => (
+      <td className="text-slate-300 border border-slate-700 px-2 py-1">
+        {children}
+      </td>
+    ),
+    blockquote: ({ children }) => (
+      <blockquote className="border-l-2 border-indigo-500 pl-3 text-slate-400 italic my-2">
+        {children}
+      </blockquote>
+    ),
+  };
 
   return (
     <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 p-6 gap-6 h-[calc(100vh-69px)] overflow-hidden">
@@ -356,6 +648,31 @@ export default function AdvancedStudio() {
                 </span>
               )}
             </button>
+            <button
+              onClick={() => setActiveRightTab("run")}
+              className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all ${
+                activeRightTab === "run"
+                  ? "bg-indigo-600 text-white"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              RUN
+            </button>
+            <button
+              onClick={() => setActiveRightTab("chats")}
+              className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all ${
+                activeRightTab === "chats"
+                  ? "bg-indigo-600 text-white"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              CHATS
+              {chatSessions.length > 0 && (
+                <span className="ml-1.5 px-1.5 py-0.5 bg-slate-700 rounded text-xs">
+                  {chatSessions.length}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Copy + Download — only on output tab */}
@@ -442,6 +759,232 @@ export default function AdvancedStudio() {
                     )}
                   </div>
                 </button>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Live Sandbox Tab */}
+        {activeRightTab === "run" && (
+          <div className="flex-1 flex flex-col gap-3 overflow-hidden">
+            {/* Model Selector */}
+            <div className="flex items-center gap-2">
+              {Object.entries(MODEL_CONFIG).map(([key, config]) => (
+                <button
+                  key={key}
+                  onClick={() => setSelectedModel(key)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono border transition-all ${
+                    selectedModel === key
+                      ? "bg-indigo-600/20 border-indigo-500/50 text-indigo-300"
+                      : "bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700"
+                  }`}
+                >
+                  {config.label}
+                </button>
+              ))}
+              {/* New Chat Initiator */}
+              {conversation.length > 0 && (
+                <button
+                  onClick={handleNewChat}
+                  className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition-colors"
+                >
+                  <Plus size={12} />
+                  New Chat
+                </button>
+              )}
+            </div>
+
+            {/* API Key Input */}
+            <input
+              type="password"
+              placeholder={`Enter ${MODEL_CONFIG[selectedModel].label} API key`}
+              value={apiKeys[selectedModel]}
+              onChange={(e) => {
+                const val = e.target.value;
+                setApiKeys((prev) => ({ ...prev, [selectedModel]: val }));
+                sessionStorage.setItem(
+                  MODEL_CONFIG[selectedModel].storageKey,
+                  val,
+                );
+              }}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500"
+            />
+
+            {/* Run Compiled Prompt Button */}
+            {compiledOutput && conversation.length === 0 && (
+              <button
+                onClick={() => handleSend(true)}
+                disabled={isStreaming || !apiKeys[selectedModel]?.trim()}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"
+              >
+                {isStreaming ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <Play size={13} />
+                )}
+                {isStreaming ? "Running..." : "Run Compiled Prompt"}
+              </button>
+            )}
+
+            {/* Conversation Thread */}
+            <div className="h-100 overflow-y-auto flex flex-col gap-3 bg-slate-950 border border-slate-800 rounded-lg p-3">
+              {" "}
+              {conversation.length === 0 && !isStreaming && (
+                <div className="text-slate-600 h-full flex items-center justify-center italic text-xs">
+                  Compile a prompt then hit Run to start.
+                </div>
+              )}
+              {conversation.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`flex flex-col gap-1 ${msg.role === "user" ? "items-end" : "items-start"}`}
+                >
+                  <span className="text-xs font-mono text-slate-600">
+                    {msg.role === "user"
+                      ? "You"
+                      : MODEL_CONFIG[selectedModel].label}
+                  </span>
+                  <div
+                    className={`max-w-[90%] rounded-lg px-3 py-2 text-xs ${
+                      msg.role === "user"
+                        ? "bg-indigo-600/20 text-indigo-200 border border-indigo-500/30"
+                        : "bg-slate-900 text-slate-300 border border-slate-800"
+                    }`}
+                  >
+                    {msg.role === "assistant" ? (
+                      <ReactMarkdown components={MarkdownComponents}>
+                        {msg.content}
+                      </ReactMarkdown>
+                    ) : (
+                      <p className="font-sans">{msg.content}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {/* Streaming indicator */}
+              {isStreaming && streamingText && (
+                <div className="flex flex-col gap-1 items-start">
+                  <span className="text-xs font-mono text-slate-600">
+                    {MODEL_CONFIG[selectedModel].label}
+                  </span>
+                  <div className="max-w-[90%] bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-300">
+                    <ReactMarkdown components={MarkdownComponents}>
+                      {streamingText}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              )}
+              <div ref={conversationEndRef} />
+            </div>
+
+            {/* Token Metrics */}
+            {metrics && (
+              <div className="flex items-center gap-3 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg">
+                <span className="text-xs font-mono text-slate-500">
+                  Input:{" "}
+                  <span className="text-slate-300">{metrics.inputTokens}</span>
+                </span>
+                <span className="text-xs text-slate-700">·</span>
+                <span className="text-xs font-mono text-slate-500">
+                  Output:{" "}
+                  <span className="text-slate-300">{metrics.outputTokens}</span>
+                </span>
+                <span className="text-xs text-slate-700">·</span>
+                <span className="text-xs font-mono text-slate-500">
+                  Total:{" "}
+                  <span className="text-indigo-400">{metrics.totalTokens}</span>
+                </span>
+              </div>
+            )}
+
+            {/* Follow-up Input */}
+            {conversation.length > 0 && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Ask a follow-up..."
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && !isStreaming && handleSend(false)
+                  }
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500"
+                />
+                <button
+                  onClick={() => handleSend(false)}
+                  disabled={isStreaming || !userInput.trim()}
+                  className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs transition-colors"
+                >
+                  {isStreaming ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <Send size={13} />
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Chat History */}
+        {activeRightTab === "chats" && (
+          <div className="flex-1 overflow-y-auto flex flex-col gap-2">
+            {/* New Chat Button */}
+            <button
+              onClick={handleNewChat}
+              className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 rounded-lg text-xs text-indigo-300 transition-colors"
+            >
+              <Plus size={12} />
+              New Chat Session
+            </button>
+
+            {chatSessions.length === 0 ? (
+              <div className="text-slate-600 h-full flex items-center justify-center italic text-xs">
+                No chat sessions yet. Run a compiled prompt to start.
+              </div>
+            ) : (
+              chatSessions.map((session) => (
+                <div
+                  key={session.id}
+                  onClick={() => handleResumeChat(session)}
+                  className={`w-full text-left p-3 border rounded-lg transition-all cursor-pointer ${
+                    activeChatId === session.id
+                      ? "bg-indigo-600/10 border-indigo-500/40"
+                      : "bg-slate-950 border-slate-800 hover:border-slate-700"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-mono text-indigo-400 font-medium truncate max-w-[70%]">
+                      {session.title}
+                    </span>
+                    <button
+                      onClick={(e) => handleDeleteChat(session.id, e)}
+                      className="text-slate-600 hover:text-red-400 transition-colors"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="text-xs px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded font-mono">
+                      {MODEL_CONFIG[session.model]?.label}
+                    </span>
+                    {session.persona && (
+                      <span className="text-xs px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded font-mono">
+                        {session.persona}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-600">
+                      {session.conversation.length} messages
+                    </span>
+                    <span className="text-xs text-slate-600 font-mono">
+                      {session.updatedAt}
+                    </span>
+                  </div>
+                </div>
               ))
             )}
           </div>
