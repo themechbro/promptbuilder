@@ -13,6 +13,7 @@ import {
   Send,
   Loader2,
   X,
+  Sparkles,
 } from "lucide-react";
 import SelectComponentModal from "../components/SelectComponentModal";
 import localforage from "localforage";
@@ -56,6 +57,16 @@ export default function AdvancedStudio() {
   const [chatSessions, setChatSessions] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const conversationEndRef = useRef(null);
+
+  // Semantic Search States
+  const [suggestions, setSuggestions] = useState({
+    persona: [],
+    protocol: [],
+    format: [],
+  });
+  const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
+  const [hasSuggestions, setHasSuggestions] = useState(false);
+  const lastQueryRef = useRef("");
 
   const handleCompile = () => {
     try {
@@ -162,6 +173,9 @@ export default function AdvancedStudio() {
     setVariables({});
     setCompiledOutput(null);
     setError(null);
+    setSuggestions({ persona: [], protocol: [], format: [] });
+    setHasSuggestions(false);
+    lastQueryRef.current = "";
   };
 
   const handleSaveChatSession = (updatedConversation) => {
@@ -361,6 +375,91 @@ export default function AdvancedStudio() {
     conversationEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversation, streamingText]);
 
+  // Semantic Search
+  useEffect(() => {
+    if (!template || template.trim().length < 40) {
+      setSuggestions({ persona: [], protocol: [], format: [] });
+      setHasSuggestions(false);
+      return;
+    }
+
+    // Skip if query hasn't changed significantly (less than 10 new chars)
+    const currentQuery = template.trim();
+    if (
+      Math.abs(currentQuery.length - lastQueryRef.current.length) < 10 &&
+      lastQueryRef.current !== ""
+    ) {
+      return;
+    }
+
+    const debounce = setTimeout(async () => {
+      lastQueryRef.current = currentQuery;
+      setIsFetchingSuggestions(true);
+      try {
+        const [personaRes, protocolRes, formatRes] = await Promise.all([
+          fetch("/api/components/search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              query: currentQuery,
+              type: "persona",
+              threshold: 0.3,
+              count: 3,
+            }),
+          }),
+          fetch("/api/components/search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              query: currentQuery,
+              type: "protocol",
+              threshold: 0.3,
+              count: 3,
+            }),
+          }),
+          fetch("/api/components/search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              query: currentQuery,
+              type: "format",
+              threshold: 0.3,
+              count: 3,
+            }),
+          }),
+        ]);
+
+        const personaData = personaRes.ok
+          ? await personaRes.json()
+          : { results: [] };
+        const protocolData = protocolRes.ok
+          ? await protocolRes.json()
+          : { results: [] };
+        const formatData = formatRes.ok
+          ? await formatRes.json()
+          : { results: [] };
+
+        setSuggestions({
+          persona: personaData.results || [],
+          protocol: protocolData.results || [],
+          format: formatData.results || [],
+        });
+        setHasSuggestions(
+          (personaData.results?.length || 0) +
+            (protocolData.results?.length || 0) +
+            (formatData.results?.length || 0) >
+            0,
+        );
+      } catch (err) {
+        console.error("Suggestion fetch failed:", err.message);
+      } finally {
+        setIsFetchingSuggestions(false);
+      }
+    }, 1500);
+
+    return () => clearTimeout(debounce);
+  }, [template]);
+
   const MODEL_CONFIG = {
     gemini: { label: "Gemini", storageKey: "sandbox_sk_gemini" },
     openai: { label: "GPT-4o Mini", storageKey: "sandbox_sk_openai" },
@@ -434,7 +533,11 @@ export default function AdvancedStudio() {
       </blockquote>
     ),
   };
-
+  console.log("Render state:", {
+    isFetchingSuggestions,
+    hasSuggestions,
+    suggestions,
+  });
   return (
     <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 p-6 gap-6 h-[calc(100vh-69px)] overflow-hidden">
       {/* Left Column: Composable Matrix Inputs */}
@@ -517,6 +620,66 @@ export default function AdvancedStudio() {
             />
           )}
         </div>
+
+        {/* Semantic Suggestions */}
+        {(isFetchingSuggestions || hasSuggestions) && (
+          <div className="border border-slate-800 bg-slate-900/30 p-4 rounded-xl">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles size={13} className="text-indigo-400" />
+              <h3 className="text-xs font-mono text-indigo-400 font-semibold">
+                SEMANTIC SUGGESTIONS
+              </h3>
+              {isFetchingSuggestions && (
+                <Loader2
+                  size={11}
+                  className="animate-spin text-slate-500 ml-auto"
+                />
+              )}
+            </div>
+
+            {!isFetchingSuggestions &&
+              ["persona", "protocol", "format"].map(
+                (type) =>
+                  suggestions[type]?.length > 0 && (
+                    <div key={type} className="mb-3">
+                      <p className="text-xs font-mono text-slate-500 mb-1.5">
+                        {type.toUpperCase()}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {suggestions[type].map((s) => {
+                          const isSelected =
+                            type === "persona"
+                              ? selectedPersona?.slug === s.slug
+                              : type === "protocol"
+                                ? selectedProtocol?.slug === s.slug
+                                : selectedFormat?.slug === s.slug;
+
+                          return (
+                            <button
+                              key={s.id}
+                              onClick={() => handleComponentSelected(type, s)}
+                              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs border transition-all ${
+                                isSelected
+                                  ? "bg-indigo-600/20 border-indigo-500/50 text-indigo-300"
+                                  : "bg-slate-950 border-slate-800 text-slate-400 hover:border-indigo-500/40 hover:text-indigo-300"
+                              }`}
+                            >
+                              {isSelected && (
+                                <Check size={11} className="text-indigo-400" />
+                              )}
+                              {s.name}
+                              <span className="text-slate-600 text-xs">
+                                {Math.round(s.similarity * 100)}%
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ),
+              )}
+          </div>
+        )}
 
         {/* Task Template Area */}
         <div className="flex-1 flex flex-col border border-slate-800 bg-slate-900/30 p-4 rounded-xl min-h-[300px]">

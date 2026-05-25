@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { generateEmbedding } from "@/utils/generateEmbedding";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -93,7 +94,6 @@ export async function POST(request) {
     const body = await request.json();
     const { name, type, content, version, is_public } = body;
 
-    // Validate required fields
     if (!name?.trim() || !type || !content?.trim()) {
       return NextResponse.json(
         { error: "Name, type and content are required." },
@@ -115,12 +115,22 @@ export async function POST(request) {
       );
     }
 
-    // Auto-generate slug from name
     const slug = name
       .trim()
       .toLowerCase()
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9-]/g, "");
+
+    // Generate embedding from name + content combined
+    let embedding = null;
+    try {
+      embedding = await generateEmbedding(
+        `${name.trim()}\n\n${content.trim()}`,
+      );
+    } catch (embErr) {
+      console.error("Embedding generation failed:", embErr.message);
+      // Don't block component creation if embedding fails
+    }
 
     const payload = {
       name: name.trim(),
@@ -130,7 +140,9 @@ export async function POST(request) {
       version: version?.trim() || "1.0.0",
       is_public: is_public ?? false,
       created_by: user.id,
+      ...(embedding && { embedding: JSON.stringify(embedding) }),
     };
+
     const response = await fetch(`${SUPABASE_URL}/rest/v1/prompt_components`, {
       method: "POST",
       headers: {
