@@ -9,7 +9,9 @@ export default function Footer() {
             Prompt Builder
           </span>
           <span className="text-xs text-slate-600">·</span>
-          <span className="text-xs text-slate-500">© 2026 themechbro</span>
+          <span className="text-xs text-slate-500">
+            © 2026 Made with 🫰 themechbro
+          </span>
         </div>
 
         {/* Right: Links */}
