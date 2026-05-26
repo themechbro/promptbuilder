@@ -15,6 +15,17 @@ import {
   Loader2,
   X,
   Sparkles,
+  Brain,
+  GitBranch,
+  LayoutTemplate,
+  FileCode2,
+  Layers,
+  FileText,
+  Braces,
+  Zap,
+  Variable,
+  PackageOpen,
+  Boxes,
 } from "lucide-react";
 import SelectComponentModal from "../components/SelectComponentModal";
 import localforage from "localforage";
@@ -571,6 +582,42 @@ export default function AdvancedStudio() {
     hasSuggestions,
     suggestions,
   });
+
+  const TYPE_CONFIG = {
+    persona: {
+      icon: Brain,
+      color: "text-violet-400",
+      border: "border-violet-500/40",
+      bg: "bg-violet-500/10",
+      glow: "shadow-violet-500/20",
+      dot: "bg-violet-400",
+    },
+    protocol: {
+      icon: GitBranch,
+      color: "text-blue-400",
+      border: "border-blue-500/40",
+      bg: "bg-blue-500/10",
+      glow: "shadow-blue-500/20",
+      dot: "bg-blue-400",
+    },
+    format: {
+      icon: LayoutTemplate,
+      color: "text-emerald-400",
+      border: "border-emerald-500/40",
+      bg: "bg-emerald-500/10",
+      glow: "shadow-emerald-500/20",
+      dot: "bg-emerald-400",
+    },
+    template: {
+      icon: FileCode2,
+      color: "text-amber-400",
+      border: "border-amber-500/40",
+      bg: "bg-amber-500/10",
+      glow: "shadow-amber-500/20",
+      dot: "bg-amber-400",
+    },
+  };
+
   return (
     <>
       <Suspense fallback={null}>
@@ -590,32 +637,39 @@ export default function AdvancedStudio() {
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 p-6 gap-6 h-[calc(100vh-69px)] overflow-hidden">
         {/* Left Column: Composable Matrix Inputs */}
         <div className="flex flex-col gap-4 overflow-y-auto pr-2">
-          <div className="border border-slate-800 bg-slate-900/30 p-4 rounded-xl">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-semibold text-indigo-400">
-                Architecture Layers
-              </h2>
-              <button
-                onClick={handleReset}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition-colors"
-              >
-                <ListRestart size={13} />
-                Reset
-              </button>
+          {/* redesigned */}
+          <div className="border border-slate-800/80 bg-gradient-to-b from-slate-900/60 to-slate-900/30 p-5 rounded-2xl shadow-xl">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2.5">
+                <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-500/15 border border-indigo-500/30">
+                  <Layers size={14} className="text-indigo-400" />
+                </div>
+                <h2 className="text-sm font-semibold text-slate-200 tracking-wide">
+                  Architecture Layers
+                </h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 hover:border-slate-600 rounded-lg text-xs text-slate-400 hover:text-slate-200 transition-all"
+                >
+                  <Plus size={12} />
+                  New
+                </button>
+                <button
+                  onClick={handleReset}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800/80 hover:bg-red-900/20 border border-slate-700/60 hover:border-red-800/60 rounded-lg text-xs text-slate-400 hover:text-red-400 transition-all"
+                >
+                  <ListRestart size={12} />
+                  Reset
+                </button>
+              </div>
             </div>
 
-            <p className="text-xs text-slate-400 mb-4">
-              Select or attach your specialized infrastructure components.
+            <p className="text-xs text-slate-600 mb-4 ml-9">
+              Compose your prompt matrix layer by layer.
             </p>
-
-            {/* Button */}
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition-colors"
-            >
-              <Plus size={13} />
-              New Component
-            </button>
 
             {showCreateModal && (
               <CreateComponentModal
@@ -623,7 +677,9 @@ export default function AdvancedStudio() {
                 onCreated={handleComponentCreated}
               />
             )}
-            <div className="grid grid-cols-4 gap-3 mb-4">
+
+            {/* Layer Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-2">
               {["persona", "protocol", "format", "template"].map((type) => {
                 const selected =
                   type === "persona"
@@ -632,26 +688,70 @@ export default function AdvancedStudio() {
                       ? selectedProtocol
                       : type === "format"
                         ? selectedFormat
-                        : type === "template"
-                          ? selectedTemplate
-                          : null;
+                        : selectedTemplate;
+
+                const config = TYPE_CONFIG[type];
+                const Icon = config.icon;
 
                 return (
                   <button
                     key={type}
                     onClick={() => setSelectModal(type)}
-                    className={`p-3 border rounded-lg text-left text-sm transition-all ${
+                    className={`group relative p-3.5 border rounded-xl text-left transition-all duration-200 ${
                       selected
-                        ? "bg-indigo-600/10 border-indigo-500/40 hover:border-indigo-500/60"
-                        : "bg-slate-900 border-slate-800 hover:border-slate-700"
+                        ? `${config.bg} ${config.border} shadow-lg ${config.glow}`
+                        : "bg-slate-900/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-800/40"
                     }`}
                   >
-                    <div className="text-xs text-slate-500 font-mono">
-                      {type.toUpperCase()}
+                    {/* Icon + type label */}
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div
+                        className={`flex items-center justify-center w-6 h-6 rounded-md transition-colors ${
+                          selected ? config.bg : "bg-slate-800"
+                        }`}
+                      >
+                        <Icon
+                          size={13}
+                          className={
+                            selected
+                              ? config.color
+                              : "text-slate-500 group-hover:text-slate-400"
+                          }
+                        />
+                      </div>
+                      {selected && (
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${config.dot} animate-pulse`}
+                        />
+                      )}
                     </div>
-                    <div className="font-medium truncate text-slate-300 text-xs mt-1">
-                      {selected ? selected.name : "None Selected"}
+
+                    {/* Type label */}
+                    <div
+                      className={`text-[10px] font-mono font-semibold uppercase tracking-widest mb-1 transition-colors ${
+                        selected
+                          ? config.color
+                          : "text-slate-600 group-hover:text-slate-500"
+                      }`}
+                    >
+                      {type}
                     </div>
+
+                    {/* Selected name or placeholder */}
+                    <div
+                      className={`text-xs font-medium truncate transition-colors ${
+                        selected
+                          ? "text-slate-200"
+                          : "text-slate-600 group-hover:text-slate-500"
+                      }`}
+                    >
+                      {selected ? selected.name : "None"}
+                    </div>
+
+                    {/* Hover indicator */}
+                    {!selected && (
+                      <div className="absolute inset-0 rounded-xl border border-indigo-500/0 group-hover:border-indigo-500/20 transition-all duration-200" />
+                    )}
                   </button>
                 );
               })}
@@ -733,104 +833,104 @@ export default function AdvancedStudio() {
           )}
 
           {/* Task Template Area */}
-          <div className="flex-1 flex flex-col border border-slate-800 bg-slate-900/30 p-4 rounded-xl min-h-[300px]">
-            <label className="text-sm font-semibold text-slate-300 mb-2 font-mono">
-              TASK TEMPLATE
-            </label>
+          {/* Task Template Area */}
+          <div className="flex-1 flex flex-col border border-slate-800/80 bg-gradient-to-b from-slate-900/60 to-slate-900/30 p-5 rounded-2xl min-h-[300px] shadow-xl">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-800 border border-slate-700/60">
+                  <FileText size={13} className="text-slate-400" />
+                </div>
+                <label className="text-xs font-semibold text-slate-300 tracking-wide">
+                  Task Template
+                </label>
+              </div>
+              {template.length > 0 && (
+                <span className="text-[11px] font-mono text-slate-600">
+                  {template.length} chars
+                </span>
+              )}
+            </div>
+
+            {/* Textarea */}
             <textarea
               value={template}
               onChange={(e) => setTemplate(e.target.value)}
               placeholder="Write your task template here. Use double curly braces for variables, e.g., {{code_snippet}}"
-              className="w-full flex-1 bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 font-mono text-sm focus:outline-none focus:border-indigo-500 resize-none"
+              className="w-full flex-1 bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 text-slate-200 font-mono text-sm focus:outline-none focus:border-indigo-500/60 focus:bg-slate-950 resize-none transition-all leading-relaxed placeholder:text-slate-700"
             />
-            {/* Detected Text */}
+
+            {/* Detected Variables */}
             {detectedVars.length > 0 && (
-              <div className="mt-3 flex flex-col gap-2">
-                <p className="text-xs text-slate-500 font-mono">
-                  DETECTED VARIABLES
-                </p>
-                {detectedVars.map((varName) => (
-                  <div key={varName} className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-indigo-400 w-32 shrink-0">{`{{${varName}}}`}</span>
-                    <input
-                      type="text"
-                      placeholder={`Enter value for ${varName}`}
-                      value={variables[varName] ?? ""}
-                      onChange={(e) =>
-                        setVariables((prev) => ({
-                          ...prev,
-                          [varName]: e.target.value,
-                        }))
-                      }
-                      className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 font-mono text-xs focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                ))}
+              <div className="mt-4 flex flex-col gap-2.5">
+                <div className="flex items-center gap-2">
+                  <Variable size={11} className="text-slate-500" />
+                  <p className="text-[11px] font-mono font-semibold text-slate-500 uppercase tracking-widest">
+                    Detected Variables
+                  </p>
+                  <span className="text-[11px] font-mono text-slate-700">
+                    {detectedVars.length}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {detectedVars.map((varName) => (
+                    <div key={varName} className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-1.5 bg-indigo-500/10 border border-indigo-500/25 rounded-lg px-2.5 py-1.5 w-36 shrink-0">
+                        <Braces
+                          size={11}
+                          className="text-indigo-500 shrink-0"
+                        />
+                        <span className="text-xs font-mono text-indigo-400 truncate">
+                          {varName}
+                        </span>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder={`Value for ${varName}…`}
+                        value={variables[varName] ?? ""}
+                        onChange={(e) =>
+                          setVariables((prev) => ({
+                            ...prev,
+                            [varName]: e.target.value,
+                          }))
+                        }
+                        className="flex-1 bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 font-mono text-xs focus:outline-none focus:border-indigo-500/60 transition-all placeholder:text-slate-700"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
+            {/* Footer */}
             <div className="mt-4 flex justify-between items-center">
-              {error && (
-                <p className="text-xs text-red-400 font-mono max-w-[70%]">
-                  {error}
-                </p>
-              )}
-              {!error && (
-                <p className="text-xs text-slate-500 font-mono">
-                  Ready to compile local matrix.
-                </p>
+              {error ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                  <p className="text-xs text-red-400 font-mono max-w-[70%]">
+                    {error}
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-700 shrink-0" />
+                  <p className="text-xs text-slate-600 font-mono">
+                    {template.length > 0
+                      ? "Ready to compile."
+                      : "Start typing to begin."}
+                  </p>
+                </div>
               )}
               <button
                 onClick={handleCompile}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors ml-auto"
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 ml-auto"
               >
+                <Zap size={13} />
                 Compile Matrix
               </button>
             </div>
           </div>
         </div>
-
-        {/* Right Column: High-Fidelity Rendering & Output Sandbox */}
-        {/* <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col h-full overflow-hidden">
-        <h2 className="text-sm font-semibold text-slate-300 mb-2 font-mono">
-          COMPILED BLUEPRINT MESSAGE ARRAY
-        </h2>
-
-        <div className="flex-1 bg-slate-950 border border-slate-800 rounded-lg p-4 overflow-y-auto font-mono text-xs text-slate-300">
-          {compiledOutput ? (
-            <pre className="whitespace-pre-wrap">
-              {JSON.stringify(compiledOutput, null, 2)}
-            </pre>
-          ) : (
-            <div className="text-slate-600 h-full flex items-center justify-center italic">
-              Input a template and hit Compile to generate payload context
-            </div>
-          )}
-        </div>
-
-        {compiledOutput && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition-colors"
-            >
-              {copied ? (
-                <Check size={12} className="text-green-400" />
-              ) : (
-                <Copy size={12} />
-              )}
-              {copied ? "Copied" : "Copy"}
-            </button>
-            <button
-              onClick={handleDownload}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition-colors"
-            >
-              <Download size={12} />
-              JSON
-            </button>
-          </div>
-        )}
-      </div> */}
 
         {/* Right Column: Output + History Tabs */}
         <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col h-full overflow-hidden">
@@ -916,14 +1016,99 @@ export default function AdvancedStudio() {
 
           {/* Output Tab */}
           {activeRightTab === "output" && (
-            <div className="flex-1 bg-slate-950 border border-slate-800 rounded-lg p-4 overflow-y-auto font-mono text-xs text-slate-300">
+            <div className="flex-1 bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden flex flex-col">
               {compiledOutput ? (
-                <pre className="whitespace-pre-wrap">
-                  {JSON.stringify(compiledOutput, null, 2)}
-                </pre>
+                <>
+                  {/* Output meta bar */}
+                  <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-800/80 bg-slate-900/40 flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                      <Boxes size={12} className="text-indigo-400" />
+                      <span className="text-[11px] font-mono text-slate-400">
+                        compiled_blueprint
+                      </span>
+                      <span className="text-[11px] font-mono text-slate-700">
+                        ·
+                      </span>
+                      <span className="text-[11px] font-mono text-slate-600">
+                        {compiledOutput.length} message
+                        {compiledOutput.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                      <span className="text-[11px] font-mono text-green-600">
+                        ready
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* JSON output */}
+                  <div className="flex-1 overflow-y-auto p-4">
+                    <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap text-slate-300">
+                      {JSON.stringify(compiledOutput, null, 2)
+                        .split("\n")
+                        .map((line, i) => {
+                          // Colorize keys, strings, roles
+                          const keyMatch = line.match(
+                            /^(\s*)("[\w]+")(: )(.*)/,
+                          );
+                          if (keyMatch) {
+                            const [, indent, key, colon, value] = keyMatch;
+                            const isRole = key === '"role"';
+                            const isSystem = value.includes('"system"');
+                            const isUser = value.includes('"user"');
+                            const isAssistant = value.includes('"assistant"');
+                            return (
+                              <span key={i} className="block">
+                                {indent}
+                                <span
+                                  className={
+                                    isRole
+                                      ? "text-indigo-400"
+                                      : "text-blue-400/80"
+                                  }
+                                >
+                                  {key}
+                                </span>
+                                <span className="text-slate-600">{colon}</span>
+                                <span
+                                  className={
+                                    isSystem
+                                      ? "text-violet-400"
+                                      : isUser
+                                        ? "text-emerald-400"
+                                        : isAssistant
+                                          ? "text-amber-400"
+                                          : "text-slate-300"
+                                  }
+                                >
+                                  {value}
+                                </span>
+                              </span>
+                            );
+                          }
+                          return (
+                            <span key={i} className="block">
+                              {line}
+                            </span>
+                          );
+                        })}
+                    </pre>
+                  </div>
+                </>
               ) : (
-                <div className="text-slate-600 h-full flex items-center justify-center italic">
-                  Input a template and hit Compile to generate payload context
+                <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800">
+                    <PackageOpen size={20} className="text-slate-700" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-slate-600 font-mono">
+                      No output yet
+                    </p>
+                    <p className="text-xs text-slate-700 mt-1">
+                      Select components, write a template, and hit Compile
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
