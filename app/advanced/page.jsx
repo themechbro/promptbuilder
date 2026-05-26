@@ -19,6 +19,7 @@ import {
 import SelectComponentModal from "../components/SelectComponentModal";
 import localforage from "localforage";
 import ReactMarkdown from "react-markdown";
+import { useSearchParams } from "next/navigation";
 
 function PackLoader({ onLoad }) {
   const searchParams = useSearchParams();
