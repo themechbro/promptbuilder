@@ -25,13 +25,19 @@ export async function middleware(request) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user && request.nextUrl.pathname.startsWith("/advanced")) {
-    return NextResponse.redirect(new URL("/auth/login", request.url));
+  const pathname = request.nextUrl.pathname;
+  if (
+    !user &&
+    (pathname.startsWith("/advanced") || pathname.startsWith("/manage"))
+  ) {
+    const loginUrl = new URL("/auth/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ["/advanced/:path*"],
+  matcher: ["/advanced/:path*", "/manage/:path*"],
 };

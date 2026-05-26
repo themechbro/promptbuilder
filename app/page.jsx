@@ -70,7 +70,7 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-[#0b1020] text-slate-100 antialiased selection:bg-cyan-400/20">
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0b1020]/90 backdrop-blur-xl">
+      <header className="top-0 z-50 border-b border-white/10 bg-[#0b1020]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-6">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
@@ -79,11 +79,8 @@ export default function HomePage() {
               </div>
               <div>
                 <h1 className="text-xl font-semibold tracking-tight text-white">
-                  Prompt Builder
-                </h1>
-                <p className="text-sm text-slate-400">
                   Build, test, and chain prompts without losing your place.
-                </p>
+                </h1>
               </div>
             </div>
           </div>

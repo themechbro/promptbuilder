@@ -63,11 +63,11 @@ export default function RootLayout({ children }) {
         {/* Page Content */}
         <main className="flex-1 flex flex-col">{children}</main>
         <Footer />
-        <Script
+        <script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
           strategy="afterInteractive"
         />
-        <Script id="google-analytics-init" strategy="afterInteractive">
+        <script id="google-analytics-init" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
@@ -77,7 +77,7 @@ export default function RootLayout({ children }) {
               page_path: window.location.pathname,
             });
           `}
-        </Script>
+        </script>
       </body>
     </html>
   );
