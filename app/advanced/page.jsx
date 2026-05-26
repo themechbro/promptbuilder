@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { supabase } from "@/utils/supabaseClient";
 import { compilePromptKitBlueprint } from "@/utils/promptCompiler";
 import CreateComponentModal from "../components/CreateComponentModal";
@@ -20,6 +19,37 @@ import {
 import SelectComponentModal from "../components/SelectComponentModal";
 import localforage from "localforage";
 import ReactMarkdown from "react-markdown";
+
+function PackLoader({ onLoad }) {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const personaId = searchParams.get("persona_id");
+    const protocolId = searchParams.get("protocol_id");
+    const formatId = searchParams.get("format_id");
+    const templateId = searchParams.get("template_id");
+
+    if (!personaId && !protocolId && !formatId && !templateId) return;
+
+    const ids = [personaId, protocolId, formatId, templateId].filter(Boolean);
+
+    supabase
+      .from("prompt_components")
+      .select("*")
+      .in("id", ids)
+      .then(({ data }) => {
+        if (!data) return;
+        onLoad({
+          persona: data.find((c) => c.id === personaId) || null,
+          protocol: data.find((c) => c.id === protocolId) || null,
+          format: data.find((c) => c.id === formatId) || null,
+          template: data.find((c) => c.id === templateId) || null,
+        });
+      });
+  }, [searchParams]);
+
+  return null;
+}
 
 export default function AdvancedStudio() {
   const [template, setTemplate] = useState("");
@@ -463,39 +493,6 @@ export default function AdvancedStudio() {
     return () => clearTimeout(debounce);
   }, [template]);
 
-  useEffect(() => {
-    const personaId = searchParams.get("persona_id");
-    const protocolId = searchParams.get("protocol_id");
-    const formatId = searchParams.get("format_id");
-    const templateId = searchParams.get("template_id");
-
-    if (!personaId && !protocolId && !formatId && !templateId) return;
-
-    const ids = [personaId, protocolId, formatId, templateId].filter(Boolean);
-
-    supabase
-      .from("prompt_components")
-      .select("*")
-      .in("id", ids)
-      .then(({ data }) => {
-        if (!data) return;
-
-        const find = (id) => data.find((c) => c.id === id) || null;
-
-        if (personaId) setSelectedPersona(find(personaId));
-        if (protocolId) setSelectedProtocol(find(protocolId));
-        if (formatId) setSelectedFormat(find(formatId));
-        if (templateId) {
-          const t = find(templateId);
-          if (t) {
-            setSelectedTemplate(t);
-            setTemplate(t.content);
-            setVariables({});
-          }
-        }
-      });
-  }, [searchParams]);
-
   const MODEL_CONFIG = {
     gemini: { label: "Gemini", storageKey: "sandbox_sk_gemini" },
     openai: { label: "GPT-4o Mini", storageKey: "sandbox_sk_openai" },
@@ -575,208 +572,226 @@ export default function AdvancedStudio() {
     suggestions,
   });
   return (
-    <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 p-6 gap-6 h-[calc(100vh-69px)] overflow-hidden">
-      {/* Left Column: Composable Matrix Inputs */}
-      <div className="flex flex-col gap-4 overflow-y-auto pr-2">
-        <div className="border border-slate-800 bg-slate-900/30 p-4 rounded-xl">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold text-indigo-400">
-              Architecture Layers
-            </h2>
+    <>
+      <Suspense fallback={null}>
+        <PackLoader
+          onLoad={({ persona, protocol, format, template }) => {
+            if (persona) setSelectedPersona(persona);
+            if (protocol) setSelectedProtocol(protocol);
+            if (format) setSelectedFormat(format);
+            if (template) {
+              setSelectedTemplate(template);
+              setTemplate(template.content);
+              setVariables({});
+            }
+          }}
+        />
+      </Suspense>
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 p-6 gap-6 h-[calc(100vh-69px)] overflow-hidden">
+        {/* Left Column: Composable Matrix Inputs */}
+        <div className="flex flex-col gap-4 overflow-y-auto pr-2">
+          <div className="border border-slate-800 bg-slate-900/30 p-4 rounded-xl">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-semibold text-indigo-400">
+                Architecture Layers
+              </h2>
+              <button
+                onClick={handleReset}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition-colors"
+              >
+                <ListRestart size={13} />
+                Reset
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400 mb-4">
+              Select or attach your specialized infrastructure components.
+            </p>
+
+            {/* Button */}
             <button
-              onClick={handleReset}
+              onClick={() => setShowCreateModal(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition-colors"
             >
-              <ListRestart size={13} />
-              Reset
+              <Plus size={13} />
+              New Component
             </button>
-          </div>
 
-          <p className="text-xs text-slate-400 mb-4">
-            Select or attach your specialized infrastructure components.
-          </p>
+            {showCreateModal && (
+              <CreateComponentModal
+                onClose={() => setShowCreateModal(false)}
+                onCreated={handleComponentCreated}
+              />
+            )}
+            <div className="grid grid-cols-4 gap-3 mb-4">
+              {["persona", "protocol", "format", "template"].map((type) => {
+                const selected =
+                  type === "persona"
+                    ? selectedPersona
+                    : type === "protocol"
+                      ? selectedProtocol
+                      : type === "format"
+                        ? selectedFormat
+                        : type === "template"
+                          ? selectedTemplate
+                          : null;
 
-          {/* Button */}
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition-colors"
-          >
-            <Plus size={13} />
-            New Component
-          </button>
-
-          {showCreateModal && (
-            <CreateComponentModal
-              onClose={() => setShowCreateModal(false)}
-              onCreated={handleComponentCreated}
-            />
-          )}
-          <div className="grid grid-cols-4 gap-3 mb-4">
-            {["persona", "protocol", "format", "template"].map((type) => {
-              const selected =
-                type === "persona"
-                  ? selectedPersona
-                  : type === "protocol"
-                    ? selectedProtocol
-                    : type === "format"
-                      ? selectedFormat
-                      : type === "template"
-                        ? selectedTemplate
-                        : null;
-
-              return (
-                <button
-                  key={type}
-                  onClick={() => setSelectModal(type)}
-                  className={`p-3 border rounded-lg text-left text-sm transition-all ${
-                    selected
-                      ? "bg-indigo-600/10 border-indigo-500/40 hover:border-indigo-500/60"
-                      : "bg-slate-900 border-slate-800 hover:border-slate-700"
-                  }`}
-                >
-                  <div className="text-xs text-slate-500 font-mono">
-                    {type.toUpperCase()}
-                  </div>
-                  <div className="font-medium truncate text-slate-300 text-xs mt-1">
-                    {selected ? selected.name : "None Selected"}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {selectModal && (
-            <SelectComponentModal
-              type={selectModal}
-              onClose={() => setSelectModal(null)}
-              onSelect={(component) => {
-                handleComponentSelected(selectModal, component);
-                setSelectModal(null);
-              }}
-            />
-          )}
-        </div>
-
-        {/* Semantic Suggestions */}
-        {(isFetchingSuggestions || hasSuggestions) && (
-          <div className="border border-slate-800 bg-slate-900/30 p-4 rounded-xl">
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkles size={13} className="text-indigo-400" />
-              <h3 className="text-xs font-mono text-indigo-400 font-semibold">
-                SEMANTIC SUGGESTIONS
-              </h3>
-              {isFetchingSuggestions && (
-                <Loader2
-                  size={11}
-                  className="animate-spin text-slate-500 ml-auto"
-                />
-              )}
-            </div>
-
-            {!isFetchingSuggestions &&
-              ["persona", "protocol", "format"].map(
-                (type) =>
-                  suggestions[type]?.length > 0 && (
-                    <div key={type} className="mb-3">
-                      <p className="text-xs font-mono text-slate-500 mb-1.5">
-                        {type.toUpperCase()}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {suggestions[type].map((s) => {
-                          const isSelected =
-                            type === "persona"
-                              ? selectedPersona?.slug === s.slug
-                              : type === "protocol"
-                                ? selectedProtocol?.slug === s.slug
-                                : selectedFormat?.slug === s.slug;
-
-                          return (
-                            <button
-                              key={s.id}
-                              onClick={() => handleComponentSelected(type, s)}
-                              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs border transition-all ${
-                                isSelected
-                                  ? "bg-indigo-600/20 border-indigo-500/50 text-indigo-300"
-                                  : "bg-slate-950 border-slate-800 text-slate-400 hover:border-indigo-500/40 hover:text-indigo-300"
-                              }`}
-                            >
-                              {isSelected && (
-                                <Check size={11} className="text-indigo-400" />
-                              )}
-                              {s.name}
-                              <span className="text-slate-600 text-xs">
-                                {Math.round(s.similarity * 100)}%
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
+                return (
+                  <button
+                    key={type}
+                    onClick={() => setSelectModal(type)}
+                    className={`p-3 border rounded-lg text-left text-sm transition-all ${
+                      selected
+                        ? "bg-indigo-600/10 border-indigo-500/40 hover:border-indigo-500/60"
+                        : "bg-slate-900 border-slate-800 hover:border-slate-700"
+                    }`}
+                  >
+                    <div className="text-xs text-slate-500 font-mono">
+                      {type.toUpperCase()}
                     </div>
-                  ),
-              )}
-          </div>
-        )}
+                    <div className="font-medium truncate text-slate-300 text-xs mt-1">
+                      {selected ? selected.name : "None Selected"}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
 
-        {/* Task Template Area */}
-        <div className="flex-1 flex flex-col border border-slate-800 bg-slate-900/30 p-4 rounded-xl min-h-[300px]">
-          <label className="text-sm font-semibold text-slate-300 mb-2 font-mono">
-            TASK TEMPLATE
-          </label>
-          <textarea
-            value={template}
-            onChange={(e) => setTemplate(e.target.value)}
-            placeholder="Write your task template here. Use double curly braces for variables, e.g., {{code_snippet}}"
-            className="w-full flex-1 bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 font-mono text-sm focus:outline-none focus:border-indigo-500 resize-none"
-          />
-          {/* Detected Text */}
-          {detectedVars.length > 0 && (
-            <div className="mt-3 flex flex-col gap-2">
-              <p className="text-xs text-slate-500 font-mono">
-                DETECTED VARIABLES
-              </p>
-              {detectedVars.map((varName) => (
-                <div key={varName} className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-indigo-400 w-32 shrink-0">{`{{${varName}}}`}</span>
-                  <input
-                    type="text"
-                    placeholder={`Enter value for ${varName}`}
-                    value={variables[varName] ?? ""}
-                    onChange={(e) =>
-                      setVariables((prev) => ({
-                        ...prev,
-                        [varName]: e.target.value,
-                      }))
-                    }
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 font-mono text-xs focus:outline-none focus:border-indigo-500"
+            {selectModal && (
+              <SelectComponentModal
+                type={selectModal}
+                onClose={() => setSelectModal(null)}
+                onSelect={(component) => {
+                  handleComponentSelected(selectModal, component);
+                  setSelectModal(null);
+                }}
+              />
+            )}
+          </div>
+
+          {/* Semantic Suggestions */}
+          {(isFetchingSuggestions || hasSuggestions) && (
+            <div className="border border-slate-800 bg-slate-900/30 p-4 rounded-xl">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles size={13} className="text-indigo-400" />
+                <h3 className="text-xs font-mono text-indigo-400 font-semibold">
+                  SEMANTIC SUGGESTIONS
+                </h3>
+                {isFetchingSuggestions && (
+                  <Loader2
+                    size={11}
+                    className="animate-spin text-slate-500 ml-auto"
                   />
-                </div>
-              ))}
+                )}
+              </div>
+
+              {!isFetchingSuggestions &&
+                ["persona", "protocol", "format"].map(
+                  (type) =>
+                    suggestions[type]?.length > 0 && (
+                      <div key={type} className="mb-3">
+                        <p className="text-xs font-mono text-slate-500 mb-1.5">
+                          {type.toUpperCase()}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {suggestions[type].map((s) => {
+                            const isSelected =
+                              type === "persona"
+                                ? selectedPersona?.slug === s.slug
+                                : type === "protocol"
+                                  ? selectedProtocol?.slug === s.slug
+                                  : selectedFormat?.slug === s.slug;
+
+                            return (
+                              <button
+                                key={s.id}
+                                onClick={() => handleComponentSelected(type, s)}
+                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs border transition-all ${
+                                  isSelected
+                                    ? "bg-indigo-600/20 border-indigo-500/50 text-indigo-300"
+                                    : "bg-slate-950 border-slate-800 text-slate-400 hover:border-indigo-500/40 hover:text-indigo-300"
+                                }`}
+                              >
+                                {isSelected && (
+                                  <Check
+                                    size={11}
+                                    className="text-indigo-400"
+                                  />
+                                )}
+                                {s.name}
+                                <span className="text-slate-600 text-xs">
+                                  {Math.round(s.similarity * 100)}%
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ),
+                )}
             </div>
           )}
 
-          <div className="mt-4 flex justify-between items-center">
-            {error && (
-              <p className="text-xs text-red-400 font-mono max-w-[70%]">
-                {error}
-              </p>
+          {/* Task Template Area */}
+          <div className="flex-1 flex flex-col border border-slate-800 bg-slate-900/30 p-4 rounded-xl min-h-[300px]">
+            <label className="text-sm font-semibold text-slate-300 mb-2 font-mono">
+              TASK TEMPLATE
+            </label>
+            <textarea
+              value={template}
+              onChange={(e) => setTemplate(e.target.value)}
+              placeholder="Write your task template here. Use double curly braces for variables, e.g., {{code_snippet}}"
+              className="w-full flex-1 bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 font-mono text-sm focus:outline-none focus:border-indigo-500 resize-none"
+            />
+            {/* Detected Text */}
+            {detectedVars.length > 0 && (
+              <div className="mt-3 flex flex-col gap-2">
+                <p className="text-xs text-slate-500 font-mono">
+                  DETECTED VARIABLES
+                </p>
+                {detectedVars.map((varName) => (
+                  <div key={varName} className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-indigo-400 w-32 shrink-0">{`{{${varName}}}`}</span>
+                    <input
+                      type="text"
+                      placeholder={`Enter value for ${varName}`}
+                      value={variables[varName] ?? ""}
+                      onChange={(e) =>
+                        setVariables((prev) => ({
+                          ...prev,
+                          [varName]: e.target.value,
+                        }))
+                      }
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-200 font-mono text-xs focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                ))}
+              </div>
             )}
-            {!error && (
-              <p className="text-xs text-slate-500 font-mono">
-                Ready to compile local matrix.
-              </p>
-            )}
-            <button
-              onClick={handleCompile}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors ml-auto"
-            >
-              Compile Matrix
-            </button>
+
+            <div className="mt-4 flex justify-between items-center">
+              {error && (
+                <p className="text-xs text-red-400 font-mono max-w-[70%]">
+                  {error}
+                </p>
+              )}
+              {!error && (
+                <p className="text-xs text-slate-500 font-mono">
+                  Ready to compile local matrix.
+                </p>
+              )}
+              <button
+                onClick={handleCompile}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors ml-auto"
+              >
+                Compile Matrix
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Right Column: High-Fidelity Rendering & Output Sandbox */}
-      {/* <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col h-full overflow-hidden">
+        {/* Right Column: High-Fidelity Rendering & Output Sandbox */}
+        {/* <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col h-full overflow-hidden">
         <h2 className="text-sm font-semibold text-slate-300 mb-2 font-mono">
           COMPILED BLUEPRINT MESSAGE ARRAY
         </h2>
@@ -817,378 +832,385 @@ export default function AdvancedStudio() {
         )}
       </div> */}
 
-      {/* Right Column: Output + History Tabs */}
-      <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col h-full overflow-hidden">
-        {/* Tab Header */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg p-1">
-            <button
-              onClick={() => setActiveRightTab("output")}
-              className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all ${
-                activeRightTab === "output"
-                  ? "bg-indigo-600 text-white"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              OUTPUT
-            </button>
-            <button
-              onClick={() => setActiveRightTab("history")}
-              className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all ${
-                activeRightTab === "history"
-                  ? "bg-indigo-600 text-white"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              HISTORY
-              {history.length > 0 && (
-                <span className="ml-1.5 px-1.5 py-0.5 bg-slate-700 rounded text-xs">
-                  {history.length}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveRightTab("run")}
-              className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all ${
-                activeRightTab === "run"
-                  ? "bg-indigo-600 text-white"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              RUN
-            </button>
-            <button
-              onClick={() => setActiveRightTab("chats")}
-              className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all ${
-                activeRightTab === "chats"
-                  ? "bg-indigo-600 text-white"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              CHATS
-              {chatSessions.length > 0 && (
-                <span className="ml-1.5 px-1.5 py-0.5 bg-slate-700 rounded text-xs">
-                  {chatSessions.length}
-                </span>
-              )}
-            </button>
+        {/* Right Column: Output + History Tabs */}
+        <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col h-full overflow-hidden">
+          {/* Tab Header */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg p-1">
+              <button
+                onClick={() => setActiveRightTab("output")}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all ${
+                  activeRightTab === "output"
+                    ? "bg-indigo-600 text-white"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                OUTPUT
+              </button>
+              <button
+                onClick={() => setActiveRightTab("history")}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all ${
+                  activeRightTab === "history"
+                    ? "bg-indigo-600 text-white"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                HISTORY
+                {history.length > 0 && (
+                  <span className="ml-1.5 px-1.5 py-0.5 bg-slate-700 rounded text-xs">
+                    {history.length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveRightTab("run")}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all ${
+                  activeRightTab === "run"
+                    ? "bg-indigo-600 text-white"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                RUN
+              </button>
+              <button
+                onClick={() => setActiveRightTab("chats")}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all ${
+                  activeRightTab === "chats"
+                    ? "bg-indigo-600 text-white"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                CHATS
+                {chatSessions.length > 0 && (
+                  <span className="ml-1.5 px-1.5 py-0.5 bg-slate-700 rounded text-xs">
+                    {chatSessions.length}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Copy + Download — only on output tab */}
+            {activeRightTab === "output" && compiledOutput && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCopy}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition-colors"
+                >
+                  {copied ? (
+                    <Check size={12} className="text-green-400" />
+                  ) : (
+                    <Copy size={12} />
+                  )}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+                <button
+                  onClick={handleDownload}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition-colors"
+                >
+                  <Download size={12} />
+                  JSON
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Copy + Download — only on output tab */}
-          {activeRightTab === "output" && compiledOutput && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleCopy}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition-colors"
-              >
-                {copied ? (
-                  <Check size={12} className="text-green-400" />
-                ) : (
-                  <Copy size={12} />
-                )}
-                {copied ? "Copied" : "Copy"}
-              </button>
-              <button
-                onClick={handleDownload}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition-colors"
-              >
-                <Download size={12} />
-                JSON
-              </button>
+          {/* Output Tab */}
+          {activeRightTab === "output" && (
+            <div className="flex-1 bg-slate-950 border border-slate-800 rounded-lg p-4 overflow-y-auto font-mono text-xs text-slate-300">
+              {compiledOutput ? (
+                <pre className="whitespace-pre-wrap">
+                  {JSON.stringify(compiledOutput, null, 2)}
+                </pre>
+              ) : (
+                <div className="text-slate-600 h-full flex items-center justify-center italic">
+                  Input a template and hit Compile to generate payload context
+                </div>
+              )}
             </div>
           )}
-        </div>
 
-        {/* Output Tab */}
-        {activeRightTab === "output" && (
-          <div className="flex-1 bg-slate-950 border border-slate-800 rounded-lg p-4 overflow-y-auto font-mono text-xs text-slate-300">
-            {compiledOutput ? (
-              <pre className="whitespace-pre-wrap">
-                {JSON.stringify(compiledOutput, null, 2)}
-              </pre>
-            ) : (
-              <div className="text-slate-600 h-full flex items-center justify-center italic">
-                Input a template and hit Compile to generate payload context
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* History Tab */}
-        {activeRightTab === "history" && (
-          <div className="flex-1 overflow-y-auto flex flex-col gap-2">
-            {history.length === 0 ? (
-              <div className="text-slate-600 h-full flex items-center justify-center italic text-xs">
-                No history yet. Compile a prompt to start.
-              </div>
-            ) : (
-              history.map((entry) => (
-                <button
-                  key={entry.id}
-                  onClick={() => {
-                    setCompiledOutput(JSON.parse(entry.prompt));
-                    setVariables(entry.formValues);
-                    setActiveRightTab("output");
-                  }}
-                  className="w-full text-left p-3 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-lg transition-all"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-mono text-indigo-400 font-medium">
-                      {entry.category}
-                    </span>
-                    <span className="text-xs text-slate-600 font-mono">
-                      {entry.timestamp}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {entry.persona && (
-                      <span className="text-xs px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded font-mono">
-                        {entry.persona}
+          {/* History Tab */}
+          {activeRightTab === "history" && (
+            <div className="flex-1 overflow-y-auto flex flex-col gap-2">
+              {history.length === 0 ? (
+                <div className="text-slate-600 h-full flex items-center justify-center italic text-xs">
+                  No history yet. Compile a prompt to start.
+                </div>
+              ) : (
+                history.map((entry) => (
+                  <button
+                    key={entry.id}
+                    onClick={() => {
+                      setCompiledOutput(JSON.parse(entry.prompt));
+                      setVariables(entry.formValues);
+                      setActiveRightTab("output");
+                    }}
+                    className="w-full text-left p-3 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-lg transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-mono text-indigo-400 font-medium">
+                        {entry.category}
                       </span>
-                    )}
-                    {entry.protocol && (
-                      <span className="text-xs px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded font-mono">
-                        {entry.protocol}
+                      <span className="text-xs text-slate-600 font-mono">
+                        {entry.timestamp}
                       </span>
-                    )}
-                    {entry.format && (
-                      <span className="text-xs px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded font-mono">
-                        {entry.format}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        )}
-
-        {/* Live Sandbox Tab */}
-        {activeRightTab === "run" && (
-          <div className="flex-1 flex flex-col gap-3 overflow-hidden">
-            {/* Model Selector */}
-            <div className="flex items-center gap-2">
-              {Object.entries(MODEL_CONFIG).map(([key, config]) => (
-                <button
-                  key={key}
-                  onClick={() => setSelectedModel(key)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono border transition-all ${
-                    selectedModel === key
-                      ? "bg-indigo-600/20 border-indigo-500/50 text-indigo-300"
-                      : "bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700"
-                  }`}
-                >
-                  {config.label}
-                </button>
-              ))}
-              {/* New Chat Initiator */}
-              {conversation.length > 0 && (
-                <button
-                  onClick={handleNewChat}
-                  className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition-colors"
-                >
-                  <Plus size={12} />
-                  New Chat
-                </button>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {entry.persona && (
+                        <span className="text-xs px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded font-mono">
+                          {entry.persona}
+                        </span>
+                      )}
+                      {entry.protocol && (
+                        <span className="text-xs px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded font-mono">
+                          {entry.protocol}
+                        </span>
+                      )}
+                      {entry.format && (
+                        <span className="text-xs px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded font-mono">
+                          {entry.format}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))
               )}
             </div>
+          )}
 
-            {/* API Key Input */}
-            <input
-              type="password"
-              placeholder={`Enter ${MODEL_CONFIG[selectedModel].label} API key`}
-              value={apiKeys[selectedModel]}
-              onChange={(e) => {
-                const val = e.target.value;
-                setApiKeys((prev) => ({ ...prev, [selectedModel]: val }));
-                sessionStorage.setItem(
-                  MODEL_CONFIG[selectedModel].storageKey,
-                  val,
-                );
-              }}
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500"
-            />
-
-            {/* Run Compiled Prompt Button */}
-            {compiledOutput && conversation.length === 0 && (
-              <button
-                onClick={() => handleSend(true)}
-                disabled={isStreaming || !apiKeys[selectedModel]?.trim()}
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"
-              >
-                {isStreaming ? (
-                  <Loader2 size={13} className="animate-spin" />
-                ) : (
-                  <Play size={13} />
-                )}
-                {isStreaming ? "Running..." : "Run Compiled Prompt"}
-              </button>
-            )}
-
-            {/* Conversation Thread */}
-            <div className="h-100 overflow-y-auto flex flex-col gap-3 bg-slate-950 border border-slate-800 rounded-lg p-3">
-              {" "}
-              {conversation.length === 0 && !isStreaming && (
-                <div className="text-slate-600 h-full flex items-center justify-center italic text-xs">
-                  Compile a prompt then hit Run to start.
-                </div>
-              )}
-              {conversation.map((msg, i) => (
-                <div
-                  key={i}
-                  className={`flex flex-col gap-1 ${msg.role === "user" ? "items-end" : "items-start"}`}
-                >
-                  <span className="text-xs font-mono text-slate-600">
-                    {msg.role === "user"
-                      ? "You"
-                      : MODEL_CONFIG[selectedModel].label}
-                  </span>
-                  <div
-                    className={`max-w-[90%] rounded-lg px-3 py-2 text-xs ${
-                      msg.role === "user"
-                        ? "bg-indigo-600/20 text-indigo-200 border border-indigo-500/30"
-                        : "bg-slate-900 text-slate-300 border border-slate-800"
+          {/* Live Sandbox Tab */}
+          {activeRightTab === "run" && (
+            <div className="flex-1 flex flex-col gap-3 overflow-hidden">
+              {/* Model Selector */}
+              <div className="flex items-center gap-2">
+                {Object.entries(MODEL_CONFIG).map(([key, config]) => (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedModel(key)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono border transition-all ${
+                      selectedModel === key
+                        ? "bg-indigo-600/20 border-indigo-500/50 text-indigo-300"
+                        : "bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700"
                     }`}
                   >
-                    {msg.role === "assistant" ? (
-                      <ReactMarkdown components={MarkdownComponents}>
-                        {msg.content}
-                      </ReactMarkdown>
-                    ) : (
-                      <p className="font-sans">{msg.content}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-              {/* Streaming indicator */}
-              {isStreaming && streamingText && (
-                <div className="flex flex-col gap-1 items-start">
-                  <span className="text-xs font-mono text-slate-600">
-                    {MODEL_CONFIG[selectedModel].label}
-                  </span>
-                  <div className="max-w-[90%] bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-300">
-                    <ReactMarkdown components={MarkdownComponents}>
-                      {streamingText}
-                    </ReactMarkdown>
-                  </div>
-                </div>
-              )}
-              <div ref={conversationEndRef} />
-            </div>
-
-            {/* Token Metrics */}
-            {metrics && (
-              <div className="flex items-center gap-3 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg">
-                <span className="text-xs font-mono text-slate-500">
-                  Input:{" "}
-                  <span className="text-slate-300">{metrics.inputTokens}</span>
-                </span>
-                <span className="text-xs text-slate-700">·</span>
-                <span className="text-xs font-mono text-slate-500">
-                  Output:{" "}
-                  <span className="text-slate-300">{metrics.outputTokens}</span>
-                </span>
-                <span className="text-xs text-slate-700">·</span>
-                <span className="text-xs font-mono text-slate-500">
-                  Total:{" "}
-                  <span className="text-indigo-400">{metrics.totalTokens}</span>
-                </span>
+                    {config.label}
+                  </button>
+                ))}
+                {/* New Chat Initiator */}
+                {conversation.length > 0 && (
+                  <button
+                    onClick={handleNewChat}
+                    className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 transition-colors"
+                  >
+                    <Plus size={12} />
+                    New Chat
+                  </button>
+                )}
               </div>
-            )}
 
-            {/* Follow-up Input */}
-            {conversation.length > 0 && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Ask a follow-up..."
-                  value={userInput}
-                  onChange={(e) => setUserInput(e.target.value)}
-                  onKeyDown={(e) =>
-                    e.key === "Enter" && !isStreaming && handleSend(false)
-                  }
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500"
-                />
+              {/* API Key Input */}
+              <input
+                type="password"
+                placeholder={`Enter ${MODEL_CONFIG[selectedModel].label} API key`}
+                value={apiKeys[selectedModel]}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setApiKeys((prev) => ({ ...prev, [selectedModel]: val }));
+                  sessionStorage.setItem(
+                    MODEL_CONFIG[selectedModel].storageKey,
+                    val,
+                  );
+                }}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500"
+              />
+
+              {/* Run Compiled Prompt Button */}
+              {compiledOutput && conversation.length === 0 && (
                 <button
-                  onClick={() => handleSend(false)}
-                  disabled={isStreaming || !userInput.trim()}
-                  className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs transition-colors"
+                  onClick={() => handleSend(true)}
+                  disabled={isStreaming || !apiKeys[selectedModel]?.trim()}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"
                 >
                   {isStreaming ? (
                     <Loader2 size={13} className="animate-spin" />
                   ) : (
-                    <Send size={13} />
+                    <Play size={13} />
                   )}
+                  {isStreaming ? "Running..." : "Run Compiled Prompt"}
                 </button>
-              </div>
-            )}
-          </div>
-        )}
+              )}
 
-        {/* Chat History */}
-        {activeRightTab === "chats" && (
-          <div className="flex-1 overflow-y-auto flex flex-col gap-2">
-            {/* New Chat Button */}
-            <button
-              onClick={handleNewChat}
-              className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 rounded-lg text-xs text-indigo-300 transition-colors"
-            >
-              <Plus size={12} />
-              New Chat Session
-            </button>
-
-            {chatSessions.length === 0 ? (
-              <div className="text-slate-600 h-full flex items-center justify-center italic text-xs">
-                No chat sessions yet. Run a compiled prompt to start.
-              </div>
-            ) : (
-              chatSessions.map((session) => (
-                <div
-                  key={session.id}
-                  onClick={() => handleResumeChat(session)}
-                  className={`w-full text-left p-3 border rounded-lg transition-all cursor-pointer ${
-                    activeChatId === session.id
-                      ? "bg-indigo-600/10 border-indigo-500/40"
-                      : "bg-slate-950 border-slate-800 hover:border-slate-700"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-mono text-indigo-400 font-medium truncate max-w-[70%]">
-                      {session.title}
+              {/* Conversation Thread */}
+              <div className="h-100 overflow-y-auto flex flex-col gap-3 bg-slate-950 border border-slate-800 rounded-lg p-3">
+                {" "}
+                {conversation.length === 0 && !isStreaming && (
+                  <div className="text-slate-600 h-full flex items-center justify-center italic text-xs">
+                    Compile a prompt then hit Run to start.
+                  </div>
+                )}
+                {conversation.map((msg, i) => (
+                  <div
+                    key={i}
+                    className={`flex flex-col gap-1 ${msg.role === "user" ? "items-end" : "items-start"}`}
+                  >
+                    <span className="text-xs font-mono text-slate-600">
+                      {msg.role === "user"
+                        ? "You"
+                        : MODEL_CONFIG[selectedModel].label}
                     </span>
-                    <button
-                      onClick={(e) => handleDeleteChat(session.id, e)}
-                      className="text-slate-600 hover:text-red-400 transition-colors"
+                    <div
+                      className={`max-w-[90%] rounded-lg px-3 py-2 text-xs ${
+                        msg.role === "user"
+                          ? "bg-indigo-600/20 text-indigo-200 border border-indigo-500/30"
+                          : "bg-slate-900 text-slate-300 border border-slate-800"
+                      }`}
                     >
-                      <X size={12} />
-                    </button>
+                      {msg.role === "assistant" ? (
+                        <ReactMarkdown components={MarkdownComponents}>
+                          {msg.content}
+                        </ReactMarkdown>
+                      ) : (
+                        <p className="font-sans">{msg.content}</p>
+                      )}
+                    </div>
                   </div>
+                ))}
+                {/* Streaming indicator */}
+                {isStreaming && streamingText && (
+                  <div className="flex flex-col gap-1 items-start">
+                    <span className="text-xs font-mono text-slate-600">
+                      {MODEL_CONFIG[selectedModel].label}
+                    </span>
+                    <div className="max-w-[90%] bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-300">
+                      <ReactMarkdown components={MarkdownComponents}>
+                        {streamingText}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                )}
+                <div ref={conversationEndRef} />
+              </div>
 
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="text-xs px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded font-mono">
-                      {MODEL_CONFIG[session.model]?.label}
+              {/* Token Metrics */}
+              {metrics && (
+                <div className="flex items-center gap-3 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg">
+                  <span className="text-xs font-mono text-slate-500">
+                    Input:{" "}
+                    <span className="text-slate-300">
+                      {metrics.inputTokens}
                     </span>
-                    {session.persona && (
-                      <span className="text-xs px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded font-mono">
-                        {session.persona}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-600">
-                      {session.conversation.length} messages
+                  </span>
+                  <span className="text-xs text-slate-700">·</span>
+                  <span className="text-xs font-mono text-slate-500">
+                    Output:{" "}
+                    <span className="text-slate-300">
+                      {metrics.outputTokens}
                     </span>
-                    <span className="text-xs text-slate-600 font-mono">
-                      {session.updatedAt}
+                  </span>
+                  <span className="text-xs text-slate-700">·</span>
+                  <span className="text-xs font-mono text-slate-500">
+                    Total:{" "}
+                    <span className="text-indigo-400">
+                      {metrics.totalTokens}
                     </span>
-                  </div>
+                  </span>
                 </div>
-              ))
-            )}
-          </div>
-        )}
+              )}
+
+              {/* Follow-up Input */}
+              {conversation.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Ask a follow-up..."
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && !isStreaming && handleSend(false)
+                    }
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500"
+                  />
+                  <button
+                    onClick={() => handleSend(false)}
+                    disabled={isStreaming || !userInput.trim()}
+                    className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs transition-colors"
+                  >
+                    {isStreaming ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : (
+                      <Send size={13} />
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Chat History */}
+          {activeRightTab === "chats" && (
+            <div className="flex-1 overflow-y-auto flex flex-col gap-2">
+              {/* New Chat Button */}
+              <button
+                onClick={handleNewChat}
+                className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 rounded-lg text-xs text-indigo-300 transition-colors"
+              >
+                <Plus size={12} />
+                New Chat Session
+              </button>
+
+              {chatSessions.length === 0 ? (
+                <div className="text-slate-600 h-full flex items-center justify-center italic text-xs">
+                  No chat sessions yet. Run a compiled prompt to start.
+                </div>
+              ) : (
+                chatSessions.map((session) => (
+                  <div
+                    key={session.id}
+                    onClick={() => handleResumeChat(session)}
+                    className={`w-full text-left p-3 border rounded-lg transition-all cursor-pointer ${
+                      activeChatId === session.id
+                        ? "bg-indigo-600/10 border-indigo-500/40"
+                        : "bg-slate-950 border-slate-800 hover:border-slate-700"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-mono text-indigo-400 font-medium truncate max-w-[70%]">
+                        {session.title}
+                      </span>
+                      <button
+                        onClick={(e) => handleDeleteChat(session.id, e)}
+                        className="text-slate-600 hover:text-red-400 transition-colors"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="text-xs px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded font-mono">
+                        {MODEL_CONFIG[session.model]?.label}
+                      </span>
+                      {session.persona && (
+                        <span className="text-xs px-1.5 py-0.5 bg-slate-800 text-slate-500 rounded font-mono">
+                          {session.persona}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-600">
+                        {session.conversation.length} messages
+                      </span>
+                      <span className="text-xs text-slate-600 font-mono">
+                        {session.updatedAt}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
