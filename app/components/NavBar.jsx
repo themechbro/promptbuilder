@@ -6,7 +6,7 @@ import { supabase } from "@/utils/supabaseClient";
 import { LogOut } from "lucide-react";
 import Image from "next/image";
 import logo from "@/public/logo/icon.png";
-import { Scale, Cpu, Library } from "lucide-react";
+import { Scale, Cpu, Library, Globe } from "lucide-react";
 export default function NavBar() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -192,6 +192,14 @@ export default function NavBar() {
                 >
                   <Library className="w-4 h-4 group-hover:scale-110 transition-transform" />
                   <span className="hidden sm:inline">My Vault</span>
+                </Link>
+
+                <Link
+                  href="/community"
+                  className="group flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-300 bg-slate-800/40 border border-slate-700/40 hover:bg-slate-700/50 hover:border-slate-600/60 rounded-lg transition-all"
+                >
+                  <Globe className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  <span className="hidden sm:inline">Community</span>
                 </Link>
 
                 <button

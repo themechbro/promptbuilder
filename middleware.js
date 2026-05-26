@@ -28,7 +28,9 @@ export async function middleware(request) {
   const pathname = request.nextUrl.pathname;
   if (
     !user &&
-    (pathname.startsWith("/advanced") || pathname.startsWith("/manage"))
+    (pathname.startsWith("/advanced") ||
+      pathname.startsWith("/manage") ||
+      pathname.startsWith("/community"))
   ) {
     const loginUrl = new URL("/auth/login", request.url);
     loginUrl.searchParams.set("next", pathname);
@@ -39,5 +41,5 @@ export async function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/advanced/:path*", "/manage/:path*"],
+  matcher: ["/advanced/:path*", "/manage/:path*", "/community/:path*"],
 };

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
+import { supabase } from "@/utils/supabaseClient";
 import { compilePromptKitBlueprint } from "@/utils/promptCompiler";
 import CreateComponentModal from "../components/CreateComponentModal";
 import {
@@ -67,6 +69,7 @@ export default function AdvancedStudio() {
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
   const [hasSuggestions, setHasSuggestions] = useState(false);
   const lastQueryRef = useRef("");
+  const searchParams = useSearchParams();
 
   const handleCompile = () => {
     try {
@@ -459,6 +462,39 @@ export default function AdvancedStudio() {
 
     return () => clearTimeout(debounce);
   }, [template]);
+
+  useEffect(() => {
+    const personaId = searchParams.get("persona_id");
+    const protocolId = searchParams.get("protocol_id");
+    const formatId = searchParams.get("format_id");
+    const templateId = searchParams.get("template_id");
+
+    if (!personaId && !protocolId && !formatId && !templateId) return;
+
+    const ids = [personaId, protocolId, formatId, templateId].filter(Boolean);
+
+    supabase
+      .from("prompt_components")
+      .select("*")
+      .in("id", ids)
+      .then(({ data }) => {
+        if (!data) return;
+
+        const find = (id) => data.find((c) => c.id === id) || null;
+
+        if (personaId) setSelectedPersona(find(personaId));
+        if (protocolId) setSelectedProtocol(find(protocolId));
+        if (formatId) setSelectedFormat(find(formatId));
+        if (templateId) {
+          const t = find(templateId);
+          if (t) {
+            setSelectedTemplate(t);
+            setTemplate(t.content);
+            setVariables({});
+          }
+        }
+      });
+  }, [searchParams]);
 
   const MODEL_CONFIG = {
     gemini: { label: "Gemini", storageKey: "sandbox_sk_gemini" },
