@@ -47,6 +47,9 @@ export const metadata = {
     description:
       "Stateless prompt orchestration IDE tracking real-time API token weights.",
   },
+  verification: {
+    google-site-verification: "JxFIKx0UgDLimx46iUYPsfjXgFmkaplSPF6t31Li8nw",
+  },
 };
 
 export default function RootLayout({ children }) {
