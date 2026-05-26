@@ -99,7 +99,6 @@ export default function AdvancedStudio() {
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
   const [hasSuggestions, setHasSuggestions] = useState(false);
   const lastQueryRef = useRef("");
-  const searchParams = useSearchParams();
 
   const handleCompile = () => {
     try {
