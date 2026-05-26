@@ -1,4 +1,11 @@
-import { BarChart3, FileSearch, ListFilter, PenLine, ScanSearch, Trash2 } from "lucide-react";
+import {
+  BarChart3,
+  FileSearch,
+  ListFilter,
+  PenLine,
+  ScanSearch,
+  Trash2,
+} from "lucide-react";
 import localforage from "localforage";
 
 const categoryIcons = {
@@ -21,14 +28,23 @@ export default function CategorySelector({ categories, activeId, onSelect }) {
 
           if (!confirm(`Delete the "${shortName}" custom template?`)) return;
 
-          const saved = await localforage.getItem("prompt_builder_custom_templates");
-          const existingCustom = saved ? (typeof saved === "string" ? JSON.parse(saved) : saved) : {};
+          const saved = await localforage.getItem(
+            "prompt_builder_custom_templates",
+          );
+          const existingCustom = saved
+            ? typeof saved === "string"
+              ? JSON.parse(saved)
+              : saved
+            : {};
           delete existingCustom[templateId];
 
           if (Object.keys(existingCustom).length === 0) {
             await localforage.removeItem("prompt_builder_custom_templates");
           } else {
-            await localforage.setItem("prompt_builder_custom_templates", existingCustom);
+            await localforage.setItem(
+              "prompt_builder_custom_templates",
+              existingCustom,
+            );
           }
 
           window.location.reload();
@@ -47,19 +63,27 @@ export default function CategorySelector({ categories, activeId, onSelect }) {
           >
             <div className="space-y-2">
               <div className="flex items-start justify-between gap-3">
-                <span className={`flex items-center gap-2 text-sm font-semibold ${isSelected ? "text-cyan-100" : "text-slate-200"}`}>
+                <span
+                  className={`flex items-center gap-2 text-sm font-semibold ${isSelected ? "text-cyan-100" : "text-slate-200"}`}
+                >
                   <Icon className="h-4 w-4" aria-hidden="true" />
                   {category.shortName}
                 </span>
-                {isSelected && <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.65)]" />}
+                {isSelected && (
+                  <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.65)]" />
+                )}
               </div>
-              <p className="line-clamp-2 text-xs leading-relaxed text-slate-500">{category.label}</p>
+              <p className="line-clamp-2 text-xs leading-relaxed text-slate-500">
+                {category.label}
+              </p>
             </div>
 
             {(category.isCustom || category.id.startsWith("custom_")) && (
               <button
                 type="button"
-                onClick={(event) => handleInlineDelete(event, category.id, category.shortName)}
+                onClick={(event) =>
+                  handleInlineDelete(event, category.id, category.shortName)
+                }
                 className="mt-3 w-fit rounded-md border border-rose-400/20 bg-rose-400/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-rose-200 opacity-80 transition-all hover:border-rose-300/40 hover:bg-rose-400/20"
               >
                 <span className="flex items-center gap-1.5">

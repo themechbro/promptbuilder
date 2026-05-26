@@ -70,33 +70,40 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-[#0b1020] text-slate-100 antialiased selection:bg-cyan-400/20">
-      <header className="top-0 z-50 border-b border-white/10 bg-[#0b1020]/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-cyan-300/30 bg-cyan-300/10 text-cyan-200">
-                <Sparkles className="h-5 w-5" aria-hidden="true" />
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold tracking-tight text-white">
-                  Build, test, and chain prompts without losing your place.
-                </h1>
-              </div>
+      <header className="relative z-40 border-b border-slate-800/60 bg-slate-950/50 backdrop-blur-xl supports-[backdrop-filter]:bg-slate-950/30">
+        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:flex-row sm:items-center sm:justify-between md:px-6">
+          {/* Title Section */}
+          <div className="flex items-center gap-4">
+            {/* Icon Wrapper with App-Theme Glow */}
+            <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.15)]">
+              <Sparkles className="h-5 w-5" aria-hidden="true" />
+              {/* Ambient inner glow */}
+              <div className="absolute inset-0 rounded-xl bg-indigo-400/10 blur-md pointer-events-none" />
             </div>
+
+            <h1 className="text-base sm:text-lg font-semibold tracking-tight text-slate-100 leading-snug max-w-lg">
+              Build, test, and chain prompts without losing your place.
+            </h1>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
-            <span className="rounded-md border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-emerald-200">
-              <span className="flex items-center gap-1.5">
-                <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                Local session
+
+          {/* Status / Security Badges */}
+          <div className="flex flex-wrap items-center gap-3 mt-1 sm:mt-0">
+            {/* Local Session Tag (Semantic Success/Secure Color) */}
+            <div className="group flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20 cursor-default">
+              <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+              <span>Local session</span>
+              {/* Live Ping Indicator */}
+              <span className="relative flex h-2 w-2 ml-0.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
               </span>
-            </span>
-            <span className="rounded-md border border-white/10 bg-white/[0.03] px-3 py-1.5">
-              <span className="flex items-center gap-1.5">
-                <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
-                Keys stay in browser memory
-              </span>
-            </span>
+            </div>
+
+            {/* Privacy Tag */}
+            <div className="flex items-center gap-2 rounded-full border border-slate-700/60 bg-slate-800/50 px-3 py-1.5 text-xs font-medium text-slate-300 backdrop-blur-md transition-colors hover:bg-slate-800/80 cursor-default shadow-sm">
+              <KeyRound className="h-4 w-4 text-slate-400" aria-hidden="true" />
+              <span>Keys stay in browser</span>
+            </div>
           </div>
         </div>
       </header>
