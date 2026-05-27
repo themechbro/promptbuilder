@@ -90,6 +90,19 @@ function validateRequest(provider, prompt, apiKey, messages) {
   return null;
 }
 
+// Add this function above the POST handler
+function sanitizeMessages(messages) {
+  return messages.map((m) => ({
+    ...m,
+    content: m.content
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2013\u2014]/g, "-")
+      .replace(/[\u2026]/g, "...")
+      .replace(/[^\x00-\xFF]/g, ""),
+  }));
+}
+
 export async function POST(request) {
   try {
     const { provider, prompt, apiKey, isJsonMode, messages } =
@@ -117,11 +130,12 @@ export async function POST(request) {
         { status: 400 },
       );
     }
+    const sanitizedMessages = messages ? sanitizeMessages(messages) : null;
 
     const result = streamText({
       model,
-      ...(messages
-        ? { messages }
+      ...(sanitizedMessages
+        ? { messages: sanitizedMessages }
         : {
             system: isJsonMode
               ? "You must return your output as a valid JSON object..."

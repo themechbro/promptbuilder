@@ -31,6 +31,7 @@ import SelectComponentModal from "../components/SelectComponentModal";
 import localforage from "localforage";
 import ReactMarkdown from "react-markdown";
 import { useSearchParams } from "next/navigation";
+import ChainBuilder from "../components/ChainBuilder";
 
 function PackLoader({ onLoad }) {
   const searchParams = useSearchParams();
@@ -167,8 +168,7 @@ export default function AdvancedStudio() {
   };
 
   const handleSaveToHistory = (compiledResult) => {
-    if (!compiledResult || !selectedTemplate) return;
-
+    if (!compiledResult) return;
     setHistory((prev) => {
       const compiledString = JSON.stringify(compiledResult);
 
@@ -177,8 +177,8 @@ export default function AdvancedStudio() {
 
       const newEntry = {
         id: crypto.randomUUID(),
-        category: selectedTemplate.name,
-        categoryId: selectedTemplate.slug,
+        category: selectedTemplate?.name || "Custom Prompt",
+        categoryId: selectedTemplate?.slug || "custom",
         prompt: compiledString,
         chainContext: "",
         timestamp: new Date().toLocaleTimeString([], {
@@ -197,6 +197,7 @@ export default function AdvancedStudio() {
     });
 
     setPromptVersions((prev) => {
+      if (!selectedTemplate) return prev;
       const slug = selectedTemplate.slug;
       const compiledString = JSON.stringify(compiledResult);
       const currentVersions = prev[slug] || [];
@@ -635,8 +636,9 @@ export default function AdvancedStudio() {
         />
       </Suspense>
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 p-6 gap-6 h-[calc(100vh-69px)] overflow-hidden">
+        {" "}
         {/* Left Column: Composable Matrix Inputs */}
-        <div className="flex flex-col gap-4 overflow-y-auto pr-2">
+        <div className="flex flex-col gap-4 overflow-y-auto pr-2 h-full">
           {/* redesigned */}
           <div className="border border-slate-800/80 bg-gradient-to-b from-slate-900/60 to-slate-900/30 p-5 rounded-2xl shadow-xl">
             {/* Header */}
@@ -834,7 +836,7 @@ export default function AdvancedStudio() {
 
           {/* Task Template Area */}
           {/* Task Template Area */}
-          <div className="flex-1 flex flex-col border border-slate-800/80 bg-gradient-to-b from-slate-900/60 to-slate-900/30 p-5 rounded-2xl min-h-[300px] shadow-xl">
+          <div className="flex flex-col border border-slate-800/80 bg-gradient-to-b from-slate-900/60 to-slate-900/30 p-5 rounded-2xl shadow-xl">
             {/* Header */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2.5">
@@ -857,7 +859,7 @@ export default function AdvancedStudio() {
               value={template}
               onChange={(e) => setTemplate(e.target.value)}
               placeholder="Write your task template here. Use double curly braces for variables, e.g., {{code_snippet}}"
-              className="w-full flex-1 bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 text-slate-200 font-mono text-sm focus:outline-none focus:border-indigo-500/60 focus:bg-slate-950 resize-none transition-all leading-relaxed placeholder:text-slate-700"
+              className="w-full h-48 bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 text-slate-200 font-mono text-sm focus:outline-none focus:border-indigo-500/60 focus:bg-slate-950 resize-none transition-all leading-relaxed placeholder:text-slate-700"
             />
 
             {/* Detected Variables */}
@@ -931,7 +933,6 @@ export default function AdvancedStudio() {
             </div>
           </div>
         </div>
-
         {/* Right Column: Output + History Tabs */}
         <div className="border border-slate-800 bg-slate-900/20 rounded-xl p-4 flex flex-col h-full overflow-hidden">
           {/* Tab Header */}
@@ -986,6 +987,16 @@ export default function AdvancedStudio() {
                     {chatSessions.length}
                   </span>
                 )}
+              </button>
+              <button
+                onClick={() => setActiveRightTab("chain")}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all ${
+                  activeRightTab === "chain"
+                    ? "bg-indigo-600 text-white"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                CHAIN
               </button>
             </div>
 
@@ -1394,6 +1405,21 @@ export default function AdvancedStudio() {
               )}
             </div>
           )}
+
+          {/* Chain Tab */}
+          <div
+            className={
+              activeRightTab === "chain"
+                ? "flex flex-col flex-1 overflow-hidden"
+                : "hidden"
+            }
+          >
+            <ChainBuilder
+              apiKeys={apiKeys}
+              selectedModel={selectedModel}
+              onModelChange={setSelectedModel}
+            />
+          </div>
         </div>
       </div>
     </>

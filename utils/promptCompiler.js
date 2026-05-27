@@ -53,9 +53,9 @@ export function compilePromptKitBlueprint(payload) {
   }
 
   // 4. Assert that no unhydrated placeholders remain
-  const unfilledVars = [...userContent.matchAll(/{{([a-zA-Z0-9_-]+)}}/g)].map(
-    (match) => match[1],
-  );
+  const unfilledVars = [...userContent.matchAll(/{{([a-zA-Z0-9_-]+)}}/g)]
+    .map((match) => match[1])
+    .filter((v) => v !== "previous_output");
   if (unfilledVars.length > 0) {
     throw new Error(
       `Compilation failed. Unfilled placeholders detected: ${unfilledVars.join(", ")}`,
