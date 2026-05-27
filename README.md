@@ -1,149 +1,193 @@
-# PromptBuilder
+# Prompt Builder
 
-Build structured prompts in seconds. No blank page. No guessing.
+**An AI prompt engineering studio with a modular component vault, semantic search, community packs, and multi-step prompt chaining.**
 
-A stateless frontend tool that converts natural language tasks into structured, role-enforced prompts — then lets you run them live against Gemini, GPT, or Claude using your own API key.
-
----
-
-## The Problem It Solves
-
-Most people prompt AI in one unstructured shot:
-
-> "Please optimize my resume for this job description."
-
-This works, but it's inefficient. The model has to infer your intent, guess the output format, and process everything in one bloated context window.
-
-**Tested result:** A single-shot resume rewrite against a job description consumed **41,000 tokens**.
-
-The same task broken into three focused, structured prompts consumed **18,000 tokens** — a **56% reduction** — while producing more precise, actionable output.
-
-This tool is built around that insight.
+[Live Demo](https://promptbuilder-five.vercel.app) · [Portfolio](https://adrin-t-paul.vercel.app)
 
 ---
 
-## How It Works
+## The Problem
 
-**Step 1 — Select a workflow**
+Most developers prompt AI models in one unstructured shot. The model has to infer intent, guess output format, and handle everything in a single bloated context window.
 
-Pick from five task categories: Summarize, Extract Data, Classify, Draft, or Analyze.
+**Measured result:** A resume rewrite task in a single prompt consumed 41,000 tokens. The same task broken into three focused, structured prompts consumed 18,000 tokens — a **56% reduction** — with more precise output.
 
-**Step 2 — Fill the form**
-
-Each workflow surfaces only the fields relevant to that task. No freeform guessing. Drop a PDF and it auto-converts to Markdown before injection.
-
-**Step 3 — Get your structured prompt**
-
-The tool compiles your inputs into a structured prompt with a defined system role, objective, and output constraints. See the token count before you send anything.
-
-**Step 4 — Run it (optional)**
-
-Switch to Live Sandbox, add your API key, and execute directly against Gemini, GPT-4o Mini, or Claude. Real token usage pulled from the API response — not estimated.
+Prompt Builder is built around that insight. It gives you a structured, reusable, composable system for building prompts — not a blank text box.
 
 ---
 
-## Key Features
+## What It Does
 
-- **5 workflow templates** — Summarize, Extract Data, Classify, Draft, Analyze
-- **PDF to Markdown parser** — client-side via pdfjs-dist, reduces token overhead before prompt injection
-- **Live token counter** — tracks raw content size vs compiled prompt size in real time
-- **Live Sandbox** — runs prompts against Gemini 2.0 Flash, GPT-4o Mini, or Claude Haiku using your own API key
-- **Multi-model comparison** — run the same prompt across all three models simultaneously and compare output and token cost
-- **Telemetry matrix** — exact input/output token counts from official API response headers
-- **Prompt history** — last 10 generated prompts cached in localStorage
-- **Export** — download any generated prompt as a `.txt` file
-- **$0 running cost** — completely stateless, no database, no stored keys
+Prompt Builder has two tiers:
+
+### Standard Workbench (`/`)
+
+A stateless prompt compiler. No auth required.
+
+- 5 workflow templates — Summarise, Extract, Classify, Draft, Analyse
+- PDF to Markdown parser — client-side via pdfjs-dist
+- Live token counter — raw content vs compiled prompt size
+- Live Sandbox — run against Gemini, GPT-4o Mini, or Claude Haiku with your own API key
+- Real token telemetry from API response headers
+- Prompt history via IndexedDB
+
+### Advanced Studio (`/advanced`)
+
+A full prompt engineering environment with auth, a component vault, semantic search, and chaining.
 
 ---
 
-## 📖 Interactive Operational Pipeline Walkthrough
+## Advanced Studio — Core Features
 
-Follow this 4-stage sequential workflow to unlock the maximum technical efficiency of the workbench:
+### Modular Component Vault
 
-### Phase 1: Context Aggregation & Schema Synthesis
-1. Select your target engineering microservice from the workflow selector grid (e.g., **Extract Data** or **Analyze**).
-2. Input your custom parameter variables inside the reactive form fields, or drop an architectural schema PDF into the edge pipeline processing node to instantly parse text content variables.
-3. Observe real-time state synchronization updating your variables on the reactive template canvas.
+Prompts are built from composable primitives stored in a PostgreSQL database:
 
-### Phase 2: Accelerated Core Compilation & Export
-1. With your form fields set, hit the power-user shortcut **`Ctrl + Enter`** (or **`Cmd + Enter`** on macOS).
-2. The compilation engine instantly resolves delimiters (`[SYSTEM ROLE]`, `[OBJECTIVE]`), parses structural parameters, and injects the output directly onto your operating system clipboard.
-3. Check the integrated telemetry indicator to track your compiled template length vs. raw resource content weights.
+| Layer        | Purpose                                                         |
+| ------------ | --------------------------------------------------------------- |
+| **Persona**  | Defines who the model is — role, expertise, communication style |
+| **Protocol** | Defines how it thinks — reasoning steps, constraints, rules     |
+| **Format**   | Defines output structure — markdown, tables, JSON, reports      |
+| **Template** | The task itself — with `{{variable}}` placeholders              |
 
-### Phase 3: Cross-Runtime Multi-Model Sandboxing
-1. Toggle to the **⚡ Interactive Live Sandbox** view utilizing the master navigation grid header.
-2. If this is your first session execution run, tap **⚙️ Manage API Keys** and securely load your upstream free-tier Gemini API token directly into isolation memory.
-3. Focus your cursor on the canvas workspace and trigger **`Ctrl + Enter`** to send concurrent API proxy dispatches to evaluate raw execution variations.
+39 public vault components across all layers, ready to use out of the box.
 
-### Phase 4: Downstream Step Chaining Pipeline Handoff
-1. Leave the sandbox view and switch to a consecutive workflow context (e.g., changing category layouts from *Extract Data* to *Analyze*).
-2. Because a successful run payload is securely resting in the parent data buffer, a pulsing token labeled **`🔗 Link Upstream Output Data`** will automatically wake up.
-3. Click the link token to instantly populate the active form text container with your previous output matrix, completely eliminating manual copy-paste overhead.
+### Semantic Search
+
+Type in the Task Template area and the studio automatically suggests relevant components from the vault using cosine similarity search powered by pgvector and Gemini embeddings (768-dimensional). Results update with a 1500ms debounce and show similarity scores.
+
+### Community Hub (`/community`)
+
+Discover and share **Prompt Packs** — curated bundles of components that represent a complete workflow preset (e.g. Code Review, Documentation Writer, Bug Analyser).
+
+- Browse public packs with category filters and semantic search
+- Load any pack directly into the studio with all components pre-selected
+- Save packs to your personal library
+- Create your own packs from the studio or community page
+- Use count tracking per pack
+
+### Prompt Chaining (`CHAIN` tab)
+
+Build multi-step prompt pipelines where each step's output feeds into the next via `{{previous_output}}`.
+
+**Example — Bug Report chain:**
+
+1. Step 1: Analyse the bug description → structured root cause analysis
+2. Step 2: `Based on: {{previous_output}}` → write a concrete fix
+3. Step 3: `Review this fix: {{previous_output}}` → edge cases and approval verdict
+
+Each step streams output in real time. Progress bar tracks completion. Chains are saved locally and reloadable.
+
+### Live Sandbox
+
+Run compiled prompts directly in the studio against three models — Gemini, GPT-4o Mini, Claude Haiku. Supports follow-up messages, conversation threading, and resumable chat sessions. Real token metrics per response.
 
 ---
 
 ## Architecture
 
-Direct API calls from the browser are blocked by CORS restrictions on all three providers. Instead of asking users to expose their keys to a third-party backend, this tool uses a minimal Next.js serverless route as a passthrough proxy:
-
 ```
-Client (React)  →  Next.js API Route  →  LLM Provider
-                ←  (Stateless Proxy)  ←
+Browser (Next.js App Router)
+    │
+    ├── /api/execute          ← BYOK streaming proxy (edge runtime)
+    ├── /api/components       ← Vault CRUD + semantic search
+    ├── /api/packs            ← Pack CRUD + save + use count
+    │
+    └── Supabase
+          ├── prompt_components   (pgvector 768d, HNSW index, RLS)
+          └── prompt_packs        (pgvector 768d, RLS)
+              user_saved_packs
 ```
 
-The API key lives in React state only — never written to localStorage, never logged server-side, gone when the tab closes.
+**API key security:** Keys are stored in `sessionStorage` only — never written to a database, never logged server-side. The Next.js edge route acts as a passthrough proxy. Keys are cleared when the tab closes.
+
+**Auth:** Google OAuth via Supabase. Middleware protects `/advanced`, `/manage`, and `/community`. RLS policies enforce row-level ownership at the database layer, with a redundant ownership check in each API route.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js, React |
-| Styling | Tailwind CSS |
-| Token Counting | gpt-tokenizer (client-side) |
-| PDF Parsing | pdfjs-dist (client-side) |
-| API Proxy | Next.js Serverless Route |
-| Providers | Gemini 2.0 Flash, GPT-4o Mini, Claude Haiku |
-| Deployment | Vercel |
-
----
-
-## Workflow Example — Resume vs Job Description
-
-This is the use case that produced the 56% token reduction figure.
-
-**Naive approach (41K tokens):**
-> Paste resume + job description → "Rewrite my resume for this role"
-
-**Structured approach (18K tokens):**
-
-1. **Extract Data** — paste the job description, extract core technical skills, required databases, architectural patterns as a Markdown table
-2. **Analyze** — paste your resume + the keyword table, run a Gap Analysis to find missing alignment
-3. **Draft** — rewrite only the experience bullets that need updating, using Action-Context-Result framework with hard metrics
-
-Same end result. 56% fewer tokens. More precise output because each step has a single, clear job.
-
----
-
-## Security
-
-- API keys are stored in React component state only
-- Keys are never written to localStorage, sessionStorage, or any database
-- The serverless proxy does not log request payloads or keys
-- Keys are cleared automatically when the session ends
+| Layer         | Technology                               |
+| ------------- | ---------------------------------------- |
+| Frontend      | Next.js 15 (App Router), React           |
+| Styling       | Tailwind CSS v4                          |
+| Database      | Supabase (PostgreSQL + pgvector)         |
+| Auth          | Supabase Google OAuth + @supabase/ssr    |
+| Embeddings    | Gemini Embedding API (768d)              |
+| Vector Search | pgvector — HNSW index, cosine similarity |
+| AI Proxy      | Next.js Edge Route — Vercel AI SDK       |
+| Providers     | Gemini, GPT-4o Mini, Claude Haiku        |
+| Local Storage | localForage (IndexedDB)                  |
+| Deployment    | Vercel                                   |
 
 ---
 
 ## Running Locally
 
 ```bash
-git clone https://github.com/your-username/prompt-template-builder
-cd prompt-template-builder
+git clone https://github.com/themechbro/promptbuilder
+cd promptbuilder
 npm install
+```
+
+Create `.env.local`:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+GEMINI_API_KEY=your_gemini_api_key
+NEXT_PUBLIC_GA_ID=your_ga4_id
+```
+
+```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-No `.env` setup required for core functionality. API keys are entered at runtime by the user.
+The Standard Workbench works without any environment variables. The Advanced Studio requires Supabase credentials and a Gemini API key for embedding generation.
+
+---
+
+## Vault Schema
+
+```sql
+create table prompt_components (
+  id uuid primary key default gen_random_uuid(),
+  type component_type not null,  -- persona | protocol | format | template | taxonomy
+  name text not null,
+  slug text not null,
+  version text not null default '1.0.0',
+  content text not null,
+  metadata jsonb default '{}',
+  embedding vector(768),          -- Gemini embedding for semantic search
+  is_public boolean default false,
+  created_by uuid references auth.users(id),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique (created_by, type, slug)
+);
+```
+
+HNSW index (`m=16, ef_construction=64`) for sub-millisecond approximate nearest neighbour search. Row-level security on all operations.
+
+---
+
+## Versions
+
+| Version | Description                                                    |
+| ------- | -------------------------------------------------------------- |
+| v1.2.4  | Standard workbench — stateless, no auth                        |
+| v2.0.0  | Advanced Studio — modular vault, Google OAuth, 4-layer canvas  |
+| v2.1.0  | Live Sandbox — streaming, conversation threading, chat history |
+| v2.2.0  | Semantic search — pgvector + Gemini embeddings, suggestion UI  |
+| v2.3.0  | Community Hub — Prompt Packs, vault management                 |
+| v2.3.1  | UI polish — Architecture Layers, modals, output tab            |
+| v2.4.0  | Prompt Chaining — linear pipeline, streaming per step          |
+
+---
+
+## Open Source Contributions
+
+- **grpc/grpc-java** — race condition fix in client connection handling ([merged](https://github.com/grpc/grpc-java))
+- **Microsoft PromptKit** — active contributor
