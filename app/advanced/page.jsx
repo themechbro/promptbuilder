@@ -32,6 +32,7 @@ import localforage from "localforage";
 import ReactMarkdown from "react-markdown";
 import { useSearchParams } from "next/navigation";
 import ChainBuilder from "../components/ChainBuilder";
+import TourTooltip from "../components/TourTooltip";
 
 function PackLoader({ onLoad }) {
   const searchParams = useSearchParams();
@@ -112,6 +113,8 @@ export default function AdvancedStudio() {
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
   const [hasSuggestions, setHasSuggestions] = useState(false);
   const lastQueryRef = useRef("");
+  // Tour
+  const [tourUser, setTourUser] = useState(null);
 
   const handleCompile = () => {
     try {
@@ -505,6 +508,13 @@ export default function AdvancedStudio() {
     return () => clearTimeout(debounce);
   }, [template]);
 
+  // Tour
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setTourUser(user);
+    });
+  }, []);
+
   const MODEL_CONFIG = {
     gemini: { label: "Gemini", storageKey: "sandbox_sk_gemini" },
     openai: { label: "GPT-4o Mini", storageKey: "sandbox_sk_openai" },
@@ -655,6 +665,7 @@ export default function AdvancedStudio() {
                 <button
                   onClick={() => setShowCreateModal(true)}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 hover:border-slate-600 rounded-lg text-xs text-slate-400 hover:text-slate-200 transition-all"
+                  id="tour-new-component"
                 >
                   <Plus size={12} />
                   New
@@ -681,7 +692,10 @@ export default function AdvancedStudio() {
             )}
 
             {/* Layer Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-2">
+            <div
+              className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-2"
+              id="tour-architecture-layers"
+            >
               {["persona", "protocol", "format", "template"].map((type) => {
                 const selected =
                   type === "persona"
@@ -836,7 +850,10 @@ export default function AdvancedStudio() {
 
           {/* Task Template Area */}
           {/* Task Template Area */}
-          <div className="flex flex-col border border-slate-800/80 bg-gradient-to-b from-slate-900/60 to-slate-900/30 p-5 rounded-2xl shadow-xl">
+          <div
+            className="flex flex-col border border-slate-800/80 bg-gradient-to-b from-slate-900/60 to-slate-900/30 p-5 rounded-2xl shadow-xl"
+            id="tour-task-template"
+          >
             {/* Header */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2.5">
@@ -926,6 +943,7 @@ export default function AdvancedStudio() {
               <button
                 onClick={handleCompile}
                 className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 ml-auto"
+                id="tour-compile-button"
               >
                 <Zap size={13} />
                 Compile Matrix
@@ -945,6 +963,7 @@ export default function AdvancedStudio() {
                     ? "bg-indigo-600 text-white"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
+                id="tour-output-tab"
               >
                 OUTPUT
               </button>
@@ -970,6 +989,7 @@ export default function AdvancedStudio() {
                     ? "bg-indigo-600 text-white"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
+                id="tour-run-tab"
               >
                 RUN
               </button>
@@ -995,6 +1015,7 @@ export default function AdvancedStudio() {
                     ? "bg-indigo-600 text-white"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
+                id="tour-chain-tab"
               >
                 CHAIN
               </button>
@@ -1421,6 +1442,10 @@ export default function AdvancedStudio() {
             />
           </div>
         </div>
+        <TourTooltip
+          userId={tourUser?.id}
+          onComplete={() => console.log("Tour completed")}
+        />
       </div>
     </>
   );
