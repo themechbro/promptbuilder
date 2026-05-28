@@ -152,7 +152,7 @@ export default function NavBar() {
 
           <div className="hidden sm:flex items-center px-2 py-0.5 rounded-md bg-slate-800/40 border border-slate-700/50">
             <span className="text-[11px] font-mono font-medium tracking-wide text-slate-400">
-              v2.2.0
+              v2.4.0
             </span>
           </div>
         </div>
