@@ -11,6 +11,8 @@ const CATEGORIES = [
   "documentation",
   "planning",
   "data",
+  "hr",
+  "customer-support",
 ];
 
 // Fetches components by type from existing API
