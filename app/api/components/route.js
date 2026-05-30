@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { generateEmbedding } from "@/utils/generateEmbedding";
+import {
+  rateLimiters,
+  checkRateLimit,
+  rateLimitResponse,
+} from "@/utils/ratelimit";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -50,13 +55,21 @@ export async function GET(request) {
       );
     }
 
+    // Auth first
     const user = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
+    // Rate limit — per user ID
+    const { success, retryAfter } = await checkRateLimit(
+      rateLimiters.componentsGet,
+      user.id,
+    );
+    if (!success) return rateLimitResponse(retryAfter);
+
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/prompt_components?type=eq.${type}&or=(created_by.eq.${user.id},is_public.eq.true)&select=id,name,slug,content,metadata,version,is_public`,
+      `${SUPABASE_URL}/rest/v1/prompt_components?type=eq.${type}&or=(created_by.eq.${user.id},is_public.eq.true)&select=id,name,slug,content,metadata,version,is_public,type`,
       {
         headers: {
           apikey: SUPABASE_SERVICE_ROLE_KEY,
@@ -86,10 +99,18 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    // Auth first
     const user = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
+
+    // Rate limit — per user ID
+    const { success, retryAfter } = await checkRateLimit(
+      rateLimiters.componentsPost,
+      user.id,
+    );
+    if (!success) return rateLimitResponse(retryAfter);
 
     const body = await request.json();
     const { name, type, content, version, is_public } = body;
@@ -121,7 +142,6 @@ export async function POST(request) {
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9-]/g, "");
 
-    // Generate embedding from name + content combined
     let embedding = null;
     try {
       embedding = await generateEmbedding(
@@ -129,7 +149,6 @@ export async function POST(request) {
       );
     } catch (embErr) {
       console.error("Embedding generation failed:", embErr.message);
-      // Don't block component creation if embedding fails
     }
 
     const payload = {

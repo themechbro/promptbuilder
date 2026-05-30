@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
+import { invalidateComponentCache } from "./SelectComponentModal";
 const TYPES = ["persona", "protocol", "format", "template", "taxonomy"];
 
 export default function EditComponentModal({ component, onClose, onSave }) {
@@ -49,7 +49,7 @@ export default function EditComponentModal({ component, onClose, onSave }) {
       setSaving(false);
       return;
     }
-
+    invalidateComponentCache(form.type);
     onSave(data.component);
   }
 

@@ -316,9 +316,17 @@ export default function AdvancedStudio() {
 
       if (!response.ok) {
         const err = await response.json();
+
+        let errorMessage = `Error: ${err.error}`;
+
+        if (response.status === 429) {
+          const retryAfter = err.retryAfter || 60;
+          errorMessage = `Rate limit hit — too many requests. Try again in ${retryAfter} seconds.`;
+        }
+
         setConversation((prev) => [
           ...prev,
-          { role: "assistant", content: `Error: ${err.error}` },
+          { role: "assistant", content: errorMessage },
         ]);
         return;
       }

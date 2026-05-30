@@ -1,6 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import {
+  rateLimiters,
+  checkRateLimit,
+  rateLimitResponse,
+} from "@/utils/ratelimit";
 
 async function createClient() {
   const cookieStore = await cookies();
@@ -22,7 +27,6 @@ async function createClient() {
   );
 }
 
-// POST /api/packs/[id]/use
 export async function POST(request, { params }) {
   const supabase = await createClient();
   const { id } = await params;
@@ -35,12 +39,18 @@ export async function POST(request, { params }) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Rate limit
+  const { success, retryAfter } = await checkRateLimit(
+    rateLimiters.packsUse,
+    user.id,
+  );
+  if (!success) return rateLimitResponse(retryAfter);
+
   const { error } = await supabase.rpc("increment_pack_use_count", {
     pack_id: id,
   });
 
   if (error) {
-    // Fallback: manual increment if RPC doesn't exist yet
     const { data: pack } = await supabase
       .from("prompt_packs")
       .select("use_count")

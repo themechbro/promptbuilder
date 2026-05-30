@@ -168,6 +168,14 @@ export default function PromptOutput({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+
+        if (response.status === 429) {
+          const retryAfter = errorData.retryAfter || 60;
+          throw new Error(
+            `Rate limit hit — too many requests. Try again in ${retryAfter} seconds.`,
+          );
+        }
+
         throw new Error(errorData.error || `HTTP Error ${response.status}`);
       }
 
@@ -177,14 +185,14 @@ export default function PromptOutput({
 
       while (true) {
         const { value, done } = await reader.read();
-        
+
         if (value) {
           fullText += decoder.decode(value, { stream: true });
         }
         if (done) {
           fullText += decoder.decode(); // flush any remaining characters
         }
-        
+
         if (fullText.includes("__STREAM_METRICS__")) {
           const [text, metricsRaw] = fullText.split("__STREAM_METRICS__");
           setOutput(text.trim());
@@ -307,11 +315,14 @@ export default function PromptOutput({
       isJsonMode ||
       (text.startsWith("{") && text.endsWith("}")) ||
       (text.startsWith("[") && text.endsWith("]")) ||
-      text.startsWith("{") || 
+      text.startsWith("{") ||
       text.startsWith("[")
     ) {
       try {
-        if ((text.startsWith("{") && text.endsWith("}")) || (text.startsWith("[") && text.endsWith("]"))) {
+        if (
+          (text.startsWith("{") && text.endsWith("}")) ||
+          (text.startsWith("[") && text.endsWith("]"))
+        ) {
           const parsed = JSON.parse(text);
           return (
             <pre className="overflow-x-auto rounded-lg border border-white/10 bg-[#0b1020] p-3 font-mono text-xs leading-relaxed text-emerald-200">
@@ -433,7 +444,9 @@ export default function PromptOutput({
             className="flex gap-2 text-sm leading-relaxed text-slate-300"
           >
             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300/70" />
-            <span>{parseInlineMarkdown(trimmed.replace(/^(\*|-|•)\s+/, ""))}</span>
+            <span>
+              {parseInlineMarkdown(trimmed.replace(/^(\*|-|•)\s+/, ""))}
+            </span>
           </div>,
         );
         continue;

@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { generateEmbedding } from "@/utils/generateEmbedding";
+import {
+  rateLimiters,
+  checkRateLimit,
+  rateLimitResponse,
+} from "@/utils/ratelimit";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const lastCallMap = new Map();
 
 async function getAuthenticatedUser() {
   const cookieStore = await cookies();
@@ -33,19 +37,18 @@ async function getAuthenticatedUser() {
 
 export async function POST(request) {
   try {
+    // Auth first
     const user = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
-    const now = Date.now();
-    const lastCall = lastCallMap.get(user.id) || 0;
-    if (now - lastCall < 100) {
-      return NextResponse.json(
-        { error: "Too many requests." },
-        { status: 429 },
-      );
-    }
-    lastCallMap.set(user.id, now);
+
+    // Rate limit — replaces broken in-memory lastCallMap
+    const { success, retryAfter } = await checkRateLimit(
+      rateLimiters.componentsSearch,
+      user.id,
+    );
+    if (!success) return rateLimitResponse(retryAfter);
 
     const { query, type, threshold = 0.5, count = 5 } = await request.json();
 
@@ -70,10 +73,8 @@ export async function POST(request) {
       );
     }
 
-    // Generate embedding for the search query
     const queryEmbedding = await generateEmbedding(query);
 
-    // Call match_components RPC
     const response = await fetch(
       `${SUPABASE_URL}/rest/v1/rpc/match_components`,
       {

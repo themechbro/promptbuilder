@@ -11,6 +11,8 @@ import {
   Loader2,
   Sparkles,
 } from "lucide-react";
+import { invalidateComponentCache } from "./SelectComponentModal";
+
 const COMPONENT_TYPES = [
   "persona",
   "protocol",
@@ -103,7 +105,7 @@ export default function CreateComponentModal({ onClose, onCreated }) {
         setError(data.error || "Failed to create component.");
         return;
       }
-
+      invalidateComponentCache(form.type);
       onCreated(data.component);
       handleClose();
     } catch (err) {

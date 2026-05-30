@@ -2,6 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { generateEmbedding } from "@/utils/generateEmbedding";
+import {
+  rateLimiters,
+  checkRateLimit,
+  rateLimitResponse,
+} from "@/utils/ratelimit";
 
 async function createClient() {
   const cookieStore = await cookies();
@@ -23,7 +28,6 @@ async function createClient() {
   );
 }
 
-// PUT /api/packs/[id]
 export async function PUT(request, { params }) {
   const supabase = await createClient();
   const { id } = await params;
@@ -32,10 +36,16 @@ export async function PUT(request, { params }) {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
-
   if (authError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Rate limit
+  const { success, retryAfter } = await checkRateLimit(
+    rateLimiters.packsPut,
+    user.id,
+  );
+  if (!success) return rateLimitResponse(retryAfter);
 
   const body = await request.json();
   const {
@@ -57,7 +67,6 @@ export async function PUT(request, { params }) {
     );
   }
 
-  // Verify ownership
   const { data: existing, error: fetchError } = await supabase
     .from("prompt_packs")
     .select("id, created_by, name, description")
@@ -72,7 +81,6 @@ export async function PUT(request, { params }) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Regenerate embedding if name or description changed
   let embeddingUpdate = {};
   const nameChanged = name.trim() !== existing.name;
   const descChanged =
@@ -119,7 +127,6 @@ export async function PUT(request, { params }) {
   return NextResponse.json({ pack: updated });
 }
 
-// DELETE /api/packs/[id]
 export async function DELETE(request, { params }) {
   const supabase = await createClient();
   const { id } = await params;
@@ -128,10 +135,16 @@ export async function DELETE(request, { params }) {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
-
   if (authError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Rate limit
+  const { success, retryAfter } = await checkRateLimit(
+    rateLimiters.packsDelete,
+    user.id,
+  );
+  if (!success) return rateLimitResponse(retryAfter);
 
   const { data: existing, error: fetchError } = await supabase
     .from("prompt_packs")

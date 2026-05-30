@@ -2,6 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { generateEmbedding } from "@/utils/generateEmbedding";
+import {
+  rateLimiters,
+  checkRateLimit,
+  rateLimitResponse,
+} from "@/utils/ratelimit";
 
 async function createClient() {
   const cookieStore = await cookies();
@@ -27,6 +32,7 @@ async function createClient() {
 export async function PUT(request, { params }) {
   const supabase = await createClient();
 
+  // Auth first
   const {
     data: { user },
     error: authError,
@@ -35,11 +41,17 @@ export async function PUT(request, { params }) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Rate limit — per user ID
+  const { success, retryAfter } = await checkRateLimit(
+    rateLimiters.componentsPut,
+    user.id,
+  );
+  if (!success) return rateLimitResponse(retryAfter);
+
   const { id } = await params;
   const body = await request.json();
   const { type, name, slug, version, content, metadata, is_public } = body;
 
-  // Basic validation
   if (!name?.trim() || !slug?.trim() || !content?.trim()) {
     return NextResponse.json(
       { error: "name, slug, and content are required" },
@@ -47,7 +59,6 @@ export async function PUT(request, { params }) {
     );
   }
 
-  // Fetch existing — verify ownership + detect content change
   const { data: existing, error: fetchError } = await supabase
     .from("prompt_components")
     .select("id, created_by, content")
@@ -58,12 +69,10 @@ export async function PUT(request, { params }) {
     return NextResponse.json({ error: "Component not found" }, { status: 404 });
   }
 
-  // Double-check ownership in app layer (RLS is also enforcing this)
   if (existing.created_by !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Regenerate embedding only if content actually changed
   let embeddingUpdate = {};
   if (content.trim() !== existing.content.trim()) {
     try {
@@ -71,7 +80,6 @@ export async function PUT(request, { params }) {
       embeddingUpdate = { embedding };
     } catch (err) {
       console.error("Embedding generation failed:", err);
-      // Non-fatal — save without updating embedding rather than blocking the edit
     }
   }
 
@@ -92,7 +100,6 @@ export async function PUT(request, { params }) {
     .single();
 
   if (updateError) {
-    // Unique constraint violation on (created_by, type, slug)
     if (updateError.code === "23505") {
       return NextResponse.json(
         {
@@ -112,6 +119,7 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   const supabase = await createClient();
 
+  // Auth first
   const {
     data: { user },
     error: authError,
@@ -120,9 +128,15 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Rate limit — per user ID
+  const { success, retryAfter } = await checkRateLimit(
+    rateLimiters.componentsDelete,
+    user.id,
+  );
+  if (!success) return rateLimitResponse(retryAfter);
+
   const { id } = await params;
 
-  // Verify ownership before delete
   const { data: existing, error: fetchError } = await supabase
     .from("prompt_components")
     .select("id, created_by, name")
