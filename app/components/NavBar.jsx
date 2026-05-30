@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/utils/supabaseClient";
-import { LogOut } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import Image from "next/image";
 import logo from "@/public/logo/icon.png";
 import { Scale, Cpu, Library, Globe } from "lucide-react";
@@ -200,6 +200,13 @@ export default function NavBar() {
                 >
                   <Globe className="w-4 h-4 group-hover:scale-110 transition-transform" />
                   <span className="hidden sm:inline">Community</span>
+                </Link>
+                <Link
+                  href="/settings"
+                  className="flex items-center gap-1.5 text-xs font-mono text-slate-400 hover:text-slate-200 transition-colors"
+                >
+                  <Settings size={13} />
+                  Settings
                 </Link>
 
                 <button

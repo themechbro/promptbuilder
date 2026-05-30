@@ -88,6 +88,51 @@ export const rateLimiters = {
     prefix: "pb:rl:components:search",
     analytics: true,
   }),
+  // API KEYS
+  keysGet: new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(20, "60 s"),
+    prefix: "pb:rl:keys:get",
+    analytics: true,
+  }),
+  keysPost: new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(5, "60 s"),
+    prefix: "pb:rl:keys:post",
+    analytics: true,
+  }),
+  keysDelete: new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(10, "60 s"),
+    prefix: "pb:rl:keys:delete",
+    analytics: true,
+  }),
+
+  // MCP Calls
+  mcpComponentsList: new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(30, "60 s"),
+    prefix: "pb:rl:mcp:components:list",
+    analytics: true,
+  }),
+  mcpComponentsGet: new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(60, "60 s"),
+    prefix: "pb:rl:mcp:components:get",
+    analytics: true,
+  }),
+  mcpPacksList: new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(30, "60 s"),
+    prefix: "pb:rl:mcp:packs:list",
+    analytics: true,
+  }),
+  mcpPacksGet: new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(60, "60 s"),
+    prefix: "pb:rl:mcp:packs:get",
+    analytics: true,
+  }),
 };
 
 export async function checkRateLimit(limiter, userId) {
