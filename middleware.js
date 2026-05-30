@@ -41,5 +41,10 @@ export async function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/advanced/:path*", "/manage/:path*", "/community/:path*"],
+  matcher: [
+    "/advanced/:path*",
+    "/manage/:path*",
+    "/community/:path*",
+    "/settings/:path*",
+  ],
 };

@@ -755,6 +755,7 @@ Deliver the results formatted strictly as a comprehensive {output_format}. Ensur
           "Emphasize Distributed Systems & Technical Architecture",
           "Highlight Scale, Concurrency, and Performance Metrics",
           "Focus on Product Leadership and Cross-Functional Impact",
+          "Maximise ATS Keyword Density and write Latex Code",
         ],
         required: true,
       },
@@ -778,7 +779,7 @@ Rewrite the [BASE RESUME CONTENT] for the role of {target_role}, heavily integra
 {chain_context}
 
 [BASE RESUME CONTENT]
-{base_resume}
+{content}
 
 [RECONSTRUCTED RESUME OUTPUT]
 Return the rewritten resume strictly in clean Markdown format. Include a professional summary, skills matrix, and the optimized experience bullets:`,
@@ -791,10 +792,13 @@ export async function getAllTemplates() {
   if (typeof window === "undefined") return systemTemplates;
 
   try {
-    const savedCustom = await localforage.getItem("prompt_builder_custom_templates");
+    const savedCustom = await localforage.getItem(
+      "prompt_builder_custom_templates",
+    );
     if (!savedCustom) return systemTemplates;
 
-    const parsedCustom = typeof savedCustom === "string" ? JSON.parse(savedCustom) : savedCustom;
+    const parsedCustom =
+      typeof savedCustom === "string" ? JSON.parse(savedCustom) : savedCustom;
     return { ...systemTemplates, ...parsedCustom };
   } catch (e) {
     console.error("Failed to hydrate custom templates from localforage:", e);
