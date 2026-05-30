@@ -6,6 +6,48 @@
 
 ---
 
+## Screenshots
+
+### Standard Workbench
+*No authentication required. Build, compile, and test prompts instantly.*
+
+<img width="1139" height="907" alt="Standard Workbench" src="https://github.com/user-attachments/assets/58fbd63c-042e-4434-b108-eb2f2b3e5385" />
+
+---
+
+### Advanced Studio
+*Google OAuth protected workspace with component vaults, semantic search, prompt packs, and chaining.*
+
+<img width="1891" height="905" alt="Advanced Studio" src="https://github.com/user-attachments/assets/2ad72d9b-b2fa-4a0e-9ce7-fe9b43baf469" />
+
+---
+
+### Component Selector
+*Browse and compose prompts using reusable Persona, Protocol, Format, and Template components.*
+
+<img width="508" height="714" alt="Component Selector" src="https://github.com/user-attachments/assets/a83f1b02-3e4c-4e17-b867-dd609a02e1be" />
+
+---
+
+### Compiled Prompt Output
+*View the final assembled prompt before execution, with full visibility into generated context.*
+
+<img width="1908" height="903" alt="Compiled Prompt" src="https://github.com/user-attachments/assets/4118c46d-3a61-4d33-9bc5-cb42b6e35192" />
+---
+
+### Live SandBox
+*Add your API Key and initiate chat through it.*
+
+<img width="1638" height="814" alt="image" src="https://github.com/user-attachments/assets/04ea037e-021e-4e06-a36e-13dc45edf555" />
+---
+
+### Step Chaining
+*You can chain multiple steps using different Prompts.*
+
+<img width="1883" height="901" alt="image" src="https://github.com/user-attachments/assets/2e0dfc04-123b-484d-b17e-a682fdb54ca0" />
+
+
+---
 ## The Problem
 
 Most developers prompt AI models in one unstructured shot. The model has to infer intent, guess output format, and handle everything in a single bloated context window.
@@ -13,6 +55,8 @@ Most developers prompt AI models in one unstructured shot. The model has to infe
 **Measured result:** A resume rewrite task in a single prompt consumed 41,000 tokens. The same task broken into three focused, structured prompts consumed 18,000 tokens — a **56% reduction** — with more precise output.
 
 Prompt Builder is built around that insight. It gives you a structured, reusable, composable system for building prompts — not a blank text box.
+
+
 
 ---
 
