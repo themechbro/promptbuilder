@@ -1,6 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import {
+  rateLimiters,
+  checkRateLimit,
+  rateLimitResponse,
+} from "@/utils/ratelimit";
 
 async function createClient() {
   const cookieStore = await cookies();
@@ -22,7 +27,6 @@ async function createClient() {
   );
 }
 
-// POST /api/packs/[id]/save — bookmark a pack
 export async function POST(request, { params }) {
   const supabase = await createClient();
   const { id } = await params;
@@ -31,12 +35,17 @@ export async function POST(request, { params }) {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
-
   if (authError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Verify pack exists
+  // Rate limit
+  const { success, retryAfter } = await checkRateLimit(
+    rateLimiters.packsSave,
+    user.id,
+  );
+  if (!success) return rateLimitResponse(retryAfter);
+
   const { data: pack, error: packError } = await supabase
     .from("prompt_packs")
     .select("id")
@@ -52,7 +61,6 @@ export async function POST(request, { params }) {
     .insert({ user_id: user.id, pack_id: id });
 
   if (error) {
-    // Already saved — not an error worth surfacing
     if (error.code === "23505") {
       return NextResponse.json({ saved: true });
     }
@@ -63,7 +71,6 @@ export async function POST(request, { params }) {
   return NextResponse.json({ saved: true });
 }
 
-// DELETE /api/packs/[id]/save — unsave a pack
 export async function DELETE(request, { params }) {
   const supabase = await createClient();
   const { id } = await params;
@@ -72,10 +79,16 @@ export async function DELETE(request, { params }) {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
-
   if (authError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Rate limit
+  const { success, retryAfter } = await checkRateLimit(
+    rateLimiters.packsUnsave,
+    user.id,
+  );
+  if (!success) return rateLimitResponse(retryAfter);
 
   const { error } = await supabase
     .from("user_saved_packs")

@@ -2,7 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { generateEmbedding } from "@/utils/generateEmbedding";
-
+import {
+  rateLimiters,
+  checkRateLimit,
+  rateLimitResponse,
+} from "@/utils/ratelimit";
 async function createClient() {
   const cookieStore = await cookies();
   return createServerClient(
@@ -23,7 +27,6 @@ async function createClient() {
   );
 }
 
-// GET /api/packs?category=code-review&q=search+term&limit=20&offset=0
 export async function GET(request) {
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);
@@ -36,15 +39,20 @@ export async function GET(request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Rate limit
+  const { success, retryAfter } = await checkRateLimit(
+    rateLimiters.packsGet,
+    user.id,
+  );
+  if (!success) return rateLimitResponse(retryAfter);
+
   try {
     let packIds = null;
 
-    // Semantic search — get matching IDs first
     if (q && q.length >= 3) {
       try {
         const embedding = await generateEmbedding(q);
@@ -65,14 +73,12 @@ export async function GET(request) {
     let query = supabase
       .from("prompt_packs")
       .select(
-        `
-        id, name, description, slug, category, use_count, is_public, created_at,
+        `id, name, description, slug, category, use_count, is_public, created_at,
         created_by,
         persona:persona_id(id, name, slug, type),
         format:format_id(id, name, slug, type),
         template:template_id(id, name, slug, type),
-        protocols:protocol_ids
-      `,
+        protocols:protocol_ids`,
         { count: "exact" },
       )
       .eq("is_public", true)
@@ -82,8 +88,6 @@ export async function GET(request) {
 
     if (category) query = query.eq("category", category);
     if (packIds) query = query.in("id", packIds);
-
-    // Fallback text search if no semantic
     if (q && !packIds) {
       query = query.or(`name.ilike.%${q}%,description.ilike.%${q}%`);
     }
@@ -95,7 +99,6 @@ export async function GET(request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Fetch protocol component details for each pack
     const allProtocolIds = [
       ...new Set(packs.flatMap((p) => p.protocols || [])),
     ];
@@ -112,7 +115,6 @@ export async function GET(request) {
       );
     }
 
-    // Check which packs this user has saved
     const packIdList = packs.map((p) => p.id);
     const { data: savedPacks } = await supabase
       .from("user_saved_packs")
@@ -141,7 +143,6 @@ export async function GET(request) {
   }
 }
 
-// POST /api/packs
 export async function POST(request) {
   const supabase = await createClient();
 
@@ -149,10 +150,16 @@ export async function POST(request) {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
-
   if (authError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Rate limit
+  const { success, retryAfter } = await checkRateLimit(
+    rateLimiters.packsPost,
+    user.id,
+  );
+  if (!success) return rateLimitResponse(retryAfter);
 
   const body = await request.json();
   const {
@@ -181,7 +188,6 @@ export async function POST(request) {
     );
   }
 
-  // Generate embedding from name + description
   let embedding = null;
   try {
     const text = `${name} ${description || ""}`.trim();

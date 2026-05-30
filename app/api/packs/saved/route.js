@@ -1,6 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import {
+  rateLimiters,
+  checkRateLimit,
+  rateLimitResponse,
+} from "@/utils/ratelimit";
 
 async function createClient() {
   const cookieStore = await cookies();
@@ -22,7 +27,6 @@ async function createClient() {
   );
 }
 
-// GET /api/packs/saved
 export async function GET() {
   const supabase = await createClient();
 
@@ -30,12 +34,17 @@ export async function GET() {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
-
   if (authError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Fetch saved pack IDs for this user
+  // Rate limit
+  const { success, retryAfter } = await checkRateLimit(
+    rateLimiters.packsSavedGet,
+    user.id,
+  );
+  if (!success) return rateLimitResponse(retryAfter);
+
   const { data: savedRows, error: savedError } = await supabase
     .from("user_saved_packs")
     .select("pack_id, saved_at")
@@ -53,18 +62,15 @@ export async function GET() {
 
   const packIds = savedRows.map((r) => r.pack_id);
 
-  // Fetch full pack details
   const { data: packs, error: packsError } = await supabase
     .from("prompt_packs")
     .select(
-      `
-      id, name, description, slug, category, use_count, is_public, created_at,
+      `id, name, description, slug, category, use_count, is_public, created_at,
       created_by,
       persona:persona_id(id, name, slug, type),
       format:format_id(id, name, slug, type),
       template:template_id(id, name, slug, type),
-      protocols:protocol_ids
-    `,
+      protocols:protocol_ids`,
     )
     .in("id", packIds);
 
@@ -73,7 +79,6 @@ export async function GET() {
     return NextResponse.json({ error: packsError.message }, { status: 500 });
   }
 
-  // Fetch protocol component details
   const allProtocolIds = [...new Set(packs.flatMap((p) => p.protocols || []))];
   let protocolMap = {};
 
@@ -88,7 +93,6 @@ export async function GET() {
     );
   }
 
-  // Preserve saved_at order and enrich
   const savedAtMap = Object.fromEntries(
     savedRows.map((r) => [r.pack_id, r.saved_at]),
   );

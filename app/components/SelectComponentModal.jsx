@@ -3,6 +3,19 @@ import { useEffect, useState } from "react";
 import { X, Check, Loader2, Eye } from "lucide-react";
 import ComponentPreviewModal from "./ComponentPreviewModal";
 
+// Module-level cache — persists across modal open/close within the session
+// Keyed by type: { persona: [...], protocol: [...], ... }
+const componentCache = {};
+
+export function invalidateComponentCache(type) {
+  if (type) {
+    delete componentCache[type];
+  } else {
+    // Invalidate all types
+    Object.keys(componentCache).forEach((k) => delete componentCache[k]);
+  }
+}
+
 export default function SelectComponentModal({ type, onClose, onSelect }) {
   const [components, setComponents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,6 +25,12 @@ export default function SelectComponentModal({ type, onClose, onSelect }) {
 
   useEffect(() => {
     const fetchComponents = async () => {
+      if (componentCache[type]) {
+        setComponents(componentCache[type]);
+        setLoading(false);
+        return;
+      }
+
       try {
         const response = await fetch(`/api/components?type=${type}`);
         const data = await response.json();
@@ -20,7 +39,8 @@ export default function SelectComponentModal({ type, onClose, onSelect }) {
           setError(data.error || "Failed to fetch components.");
           return;
         }
-
+        // Store in cache for this session
+        componentCache[type] = data.components;
         setComponents(data.components);
       } catch (err) {
         setError("Network error. Please try again.");

@@ -44,6 +44,14 @@ async function executeMessages(messages, provider, apiKey, onChunk) {
 
   if (!response.ok) {
     const err = await response.json();
+
+    if (response.status === 429) {
+      const retryAfter = err.retryAfter || 60;
+      throw new Error(
+        `Rate limit hit — too many requests. Try again in ${retryAfter} seconds.`,
+      );
+    }
+
     throw new Error(err.error || "Execution failed");
   }
 
