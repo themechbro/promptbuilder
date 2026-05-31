@@ -12,42 +12,88 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const BASE_URL = "https://promptbuilder-five.vercel.app/";
+
 export const metadata = {
-  title: "Prompt Builder — Build Prompts That Actually Work",
+  metadataBase: new URL(BASE_URL),
+
+  title: {
+    default:
+      "Prompt Builder — Component-Based Prompt IDE for Claude, GPT & Gemini",
+    template: "%s | Prompt Builder",
+  },
+
   description:
-    "A component-based prompt IDE with a public vault, semantic search, prompt chaining, and an MCP server for Claude Desktop and Cursor.",
+    "Prompt Builder is a free, open-source prompt engineering tool. Build reusable prompt components, chain prompts, use the public vault, and connect to Claude Desktop via MCP.",
+
   keywords: [
-    "Prompt Engineering",
-    "Prompt Builder",
-    "MCP Server",
-    "Claude Desktop",
-    "LLM Tools",
-    "Next.js Developer Tools",
+    "prompt builder",
+    "prompt engineering tool",
+    "AI prompt IDE",
+    "prompt components",
+    "prompt chaining",
+    "MCP server",
+    "Claude Desktop prompts",
+    "Cursor prompts",
+    "LLM prompt tool",
+    "ChatGPT prompt builder",
+    "Gemini prompt tool",
+    "prompt vault",
+    "open source prompt tool",
+    "prompt template library",
+    "prompt engineering",
+    "AI prompt library",
   ],
-  authors: [{ name: "themechbro" }],
+
+  authors: [{ name: "themechbro", url: "https://adrin-t-paul.vercel.app" }],
+
+  creator: "themechbro",
+
   openGraph: {
-    title: "Prompt Builder — Build Prompts That Actually Work",
-    description:
-      "A component-based prompt IDE with a public vault, semantic search, prompt chaining, and an MCP server for Claude Desktop and Cursor.",
     type: "website",
-    url: "https://promptbuilder-five.vercel.app/",
+    locale: "en_US",
+    url: BASE_URL,
+    siteName: "Prompt Builder",
+    title: "Prompt Builder — Component-Based Prompt IDE",
+    description:
+      "Build reusable prompt components, chain prompts, and connect to Claude Desktop via MCP. Free and open source.",
     images: [
       {
-        url: "./icon.png",
+        url: "/og-image.png", // create a 1200x630 OG image
         width: 1200,
         height: 630,
-        alt: "Prompt Builder",
+        alt: "Prompt Builder — Component-Based Prompt IDE",
       },
     ],
   },
+
   twitter: {
     card: "summary_large_image",
-    title: "Prompt Builder — Build Prompts That Actually Work",
+    title: "Prompt Builder — Component-Based Prompt IDE",
     description:
-      "Component-based prompt IDE with MCP server integration for Claude Desktop and Cursor.",
+      "Build reusable prompt components, chain prompts, and connect to Claude Desktop via MCP.",
+    images: ["/og-image.png"],
+    creator: "@themechbro", // update if you have a twitter handle
   },
+
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+
   verification: {
     google: "JxFIKx0UgDLimx46iUYPsfjXgFmkaplSPF6t31Li8nw",
+  },
+
+  alternates: {
+    canonical: BASE_URL,
   },
 };
 

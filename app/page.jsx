@@ -119,15 +119,20 @@ import Link from "next/link";
 import "./landing.css";
 import logo from "@/public/logo/icon.png";
 import Image from "next/image";
+import JsonLd from "./components/JsonLd";
 
 export const metadata = {
   title: "Prompt Builder — Build Prompts That Actually Work",
   description:
-    "A component-based prompt IDE with a public vault, semantic search, prompt chaining, and an MCP server for Claude Desktop and Cursor.",
+    "A free, open-source component-based prompt IDE. Build reusable prompt components, chain multi-step workflows, and connect your vault to Claude Desktop via MCP.",
+  alternates: {
+    canonical: "https://promptbuilder-five.vercel.app/",
+  },
   openGraph: {
-    title: "Prompt Builder",
-    description: "Build prompts that actually work.",
-    siteName: "Prompt Builder",
+    title: "Prompt Builder — Build Prompts That Actually Work",
+    description:
+      "Free prompt engineering IDE with vault, chaining, and MCP server support.",
+    url: "https://promptbuilder-five.vercel.app/",
   },
 };
 
@@ -149,6 +154,7 @@ const mcpConfigHtml = `<span style="color:#3A3A5A">{</span><br>
 export default function LandingPage() {
   return (
     <div style={{ overflowX: "hidden" }}>
+      <JsonLd />
       <div className="grid-bg" />
 
       {/* ── Nav ── */}
