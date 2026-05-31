@@ -733,3 +733,176 @@ code {
 .hero > *:nth-child(6) {
   animation-delay: 0.49s;
 }
+/* ─── Tablet (≤768px) ────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Nav — hide text links, keep CTA only */
+  .nav-a {
+    display: none;
+  }
+
+  /* Hero — reduce top padding */
+  .hero {
+    padding: 64px 20px 52px;
+  }
+
+  .hero h1 {
+    letter-spacing: -1px;
+  }
+
+  /* Feature grid — 2 columns on tablet */
+  .fg {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* MCP — stack vertically */
+  .mcp-b {
+    grid-template-columns: 1fr;
+  }
+
+  .ml {
+    padding: 28px;
+    border-right: none;
+    border-bottom: 1px solid var(--bdr);
+  }
+
+  /* Code window — ensure horizontal scroll */
+  .cy {
+    font-size: 11px;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* Steps — 2 columns on tablet */
+  .steps {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Section padding */
+  .sec {
+    padding: 48px 20px;
+  }
+
+  .mcp-w {
+    padding: 0 20px 48px;
+  }
+}
+
+/* ─── Mobile (≤480px) ────────────────────────────────────── */
+@media (max-width: 480px) {
+  /* Nav */
+  .land-nav {
+    padding: 0 16px;
+  }
+
+  .logo-nm {
+    font-size: 13px;
+  }
+
+  .nav-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  /* Hero */
+  .hero {
+    padding: 52px 16px 40px;
+  }
+
+  .hero h1 {
+    letter-spacing: -0.5px;
+    margin-bottom: 16px;
+  }
+
+  /* CTA buttons — stack vertically */
+  .ha {
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: 32px;
+  }
+
+  .bp,
+  .bs {
+    justify-content: center;
+    width: 100%;
+  }
+
+  /* Stats bar — reduce padding */
+  .st {
+    padding: 10px 8px;
+  }
+
+  .sv {
+    font-size: 16px;
+  }
+
+  .sl {
+    font-size: 9px;
+    letter-spacing: 0.4px;
+  }
+
+  /* Feature grid — single column */
+  .fg {
+    grid-template-columns: 1fr;
+  }
+
+  /* Steps — single column */
+  .steps {
+    grid-template-columns: 1fr;
+  }
+
+  /* Step cards — horizontal layout on mobile */
+  .stp {
+    text-align: left;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .sn {
+    margin: 0;
+    shrink: 0;
+    flex-shrink: 0;
+  }
+
+  /* Section padding */
+  .sec {
+    padding: 40px 16px;
+  }
+
+  .mcp-w {
+    padding: 0 16px 40px;
+  }
+
+  .ml {
+    padding: 20px 16px;
+  }
+
+  /* CTA section */
+  .cta-s {
+    padding: 48px 16px 64px;
+  }
+
+  .cta-s > div {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cta-s > div .bp,
+  .cta-s > div .bs {
+    justify-content: center;
+  }
+
+  /* Footer */
+  .land-footer {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+    padding: 18px 16px;
+  }
+
+  /* Section headings */
+  .st2 br {
+    display: none;
+  }
+}

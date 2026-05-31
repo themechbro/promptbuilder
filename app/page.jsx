@@ -148,14 +148,13 @@ const mcpConfigHtml = `<span style="color:#3A3A5A">{</span><br>
 
 export default function LandingPage() {
   return (
-    <>
+    <div style={{ overflowX: "hidden" }}>
       <div className="grid-bg" />
 
       {/* ── Nav ── */}
       <nav className="land-nav">
         <Link href="/" className="logo">
-          {/* <div className="logo-mk">PB</div> */}
-          <Image src={logo} alt="Logo of Prompt Builder" className="logo-mk" />
+          <Image src={logo} className="logo-mk" />
           <span className="logo-nm">promptbuilder</span>
         </Link>
         <div className="nav-ls">
@@ -229,11 +228,11 @@ export default function LandingPage() {
         </div>
         <div className="stats-bar">
           <div className="st">
-            <div className="sv">50+</div>
+            <div className="sv">45</div>
             <div className="sl">Components</div>
           </div>
           <div className="st">
-            <div className="sv">5</div>
+            <div className="sv">10</div>
             <div className="sl">Packs</div>
           </div>
           <div className="st">
@@ -401,6 +400,6 @@ export default function LandingPage() {
         </div>
         <div className="fr">Open source · MIT License</div>
       </footer>
-    </>
+    </div>
   );
 }

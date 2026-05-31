@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import {
   BookOpen,
@@ -14,6 +14,8 @@ import {
   Copy,
   Check,
   ArrowRight,
+  Menu,
+  X,
 } from "lucide-react";
 
 // ─── Section data ────────────────────────────────────────────────────────────
@@ -745,22 +747,97 @@ const sectionComponents = {
   "api-keys": ApiKeys,
 };
 
+// ─── Sidebar content (shared between desktop + mobile drawer) ─────────────────
+function SidebarContent({ active, navigate, onNavigate }) {
+  const handleClick = (id) => {
+    navigate(id);
+    if (onNavigate) onNavigate();
+  };
+
+  return (
+    <>
+      <p className="text-[10px] font-mono uppercase tracking-widest text-slate-600 mb-4 px-2">
+        Contents
+      </p>
+      <nav className="space-y-0.5">
+        {sections.map(({ id, label, icon: Icon }) => {
+          const isActive = active === id;
+          return (
+            <button
+              key={id}
+              onClick={() => handleClick(id)}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left ${
+                isActive
+                  ? "bg-indigo-500/15 text-indigo-300 border border-indigo-500/20"
+                  : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/40"
+              }`}
+            >
+              <Icon
+                size={14}
+                className={isActive ? "text-indigo-400" : "text-slate-600"}
+              />
+              {label}
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="mt-8 pt-6 border-t border-slate-800/50">
+        <p className="text-[10px] font-mono uppercase tracking-widest text-slate-600 mb-3 px-2">
+          Quick links
+        </p>
+        <div className="space-y-0.5">
+          {[
+            { label: "Standard Studio", href: "/standard" },
+            { label: "Advanced Studio", href: "/advanced" },
+            { label: "Settings", href: "/settings" },
+            {
+              label: "GitHub",
+              href: "https://github.com/themechbro/promptbuilder",
+              external: true,
+            },
+            {
+              label: "npm package",
+              href: "https://www.npmjs.com/package/promptbuilder-mcp",
+              external: true,
+            },
+          ].map(({ label, href, external }) => (
+            <Link
+              key={label}
+              href={href}
+              target={external ? "_blank" : undefined}
+              rel={external ? "noopener noreferrer" : undefined}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-slate-500 hover:text-slate-300 hover:bg-slate-800/40 transition-all"
+            >
+              <ArrowRight size={11} className="text-slate-600" />
+              {label}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function DocsPage() {
   const [active, setActive] = useState("getting-started");
+  const [drawerOpen, setDrawer] = useState(false);
   const contentRef = useRef(null);
 
   const ActiveSection = sectionComponents[active];
+  const activeLabel = sections.find((s) => s.id === active)?.label ?? "";
+  const ActiveIcon = sections.find((s) => s.id === active)?.icon;
 
   const navigate = (id) => {
     setActive(id);
-    if (contentRef.current) contentRef.current.scrollTop = 0;
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
     <div className="min-h-screen bg-[#0b1020] text-slate-100">
-      {/* top bar */}
-      <div className="border-b border-slate-800/60 bg-slate-950/60 backdrop-blur-xl px-6 py-3">
+      {/* ── Breadcrumb bar ── */}
+      <div className="border-b border-slate-800/60 bg-slate-950/60 backdrop-blur-xl px-4 sm:px-6 py-3">
         <div className="max-w-7xl mx-auto flex items-center gap-2 text-xs text-slate-500">
           <Link href="/" className="hover:text-slate-300 transition-colors">
             Home
@@ -770,76 +847,72 @@ export default function DocsPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto flex min-h-[calc(100vh-112px)]">
-        {/* ── Sidebar ── */}
-        <aside className="w-60 shrink-0 sticky top-[112px] self-start border-r border-slate-800/50 py-8 pr-4 pl-6">
-          <p className="text-[10px] font-mono uppercase tracking-widest text-slate-600 mb-4 px-2">
-            Contents
-          </p>
-          <nav className="space-y-0.5">
-            {sections.map(({ id, label, icon: Icon }) => {
-              const isActive = active === id;
-              return (
-                <button
-                  key={id}
-                  onClick={() => navigate(id)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left ${
-                    isActive
-                      ? "bg-indigo-500/15 text-indigo-300 border border-indigo-500/20"
-                      : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/40"
-                  }`}
-                >
-                  <Icon
-                    size={14}
-                    className={isActive ? "text-indigo-400" : "text-slate-600"}
-                  />
-                  {label}
-                </button>
-              );
-            })}
-          </nav>
+      {/* ── Mobile top bar — current section + menu button ── */}
+      <div className="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/60">
+        <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
+          {ActiveIcon && <ActiveIcon size={15} className="text-indigo-400" />}
+          {activeLabel}
+        </div>
+        <button
+          onClick={() => setDrawer(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700/50 text-xs text-slate-400 hover:text-slate-200 transition-colors"
+        >
+          <Menu size={14} />
+          Menu
+        </button>
+      </div>
 
-          {/* Quick links */}
-          <div className="mt-8 pt-6 border-t border-slate-800/50">
-            <p className="text-[10px] font-mono uppercase tracking-widest text-slate-600 mb-3 px-2">
-              Quick links
-            </p>
-            <div className="space-y-0.5">
-              {[
-                { label: "Standard Studio", href: "/standard" },
-                { label: "Advanced Studio", href: "/advanced" },
-                { label: "Settings", href: "/settings" },
-                {
-                  label: "GitHub",
-                  href: "https://github.com/themechbro/promptbuilder",
-                  external: true,
-                },
-                {
-                  label: "npm package",
-                  href: "https://www.npmjs.com/package/promptbuilder-mcp",
-                  external: true,
-                },
-              ].map(({ label, href, external }) => (
-                <Link
-                  key={label}
-                  href={href}
-                  target={external ? "_blank" : undefined}
-                  rel={external ? "noopener noreferrer" : undefined}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-slate-500 hover:text-slate-300 hover:bg-slate-800/40 transition-all"
-                >
-                  <ArrowRight size={11} className="text-slate-600" />
-                  {label}
-                </Link>
-              ))}
-            </div>
-          </div>
+      {/* ── Mobile drawer backdrop ── */}
+      {drawerOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+          onClick={() => setDrawer(false)}
+        />
+      )}
+
+      {/* ── Mobile drawer ── */}
+      <div
+        className={`lg:hidden fixed top-0 left-0 z-50 h-full w-72 bg-slate-950 border-r border-slate-800/60 flex flex-col transition-transform duration-300 ease-in-out ${
+          drawerOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {/* Drawer header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800/60">
+          <span className="text-sm font-semibold text-slate-200">
+            Documentation
+          </span>
+          <button
+            onClick={() => setDrawer(false)}
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-800/60 transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        {/* Drawer nav */}
+        <div className="flex-1 overflow-y-auto px-4 py-6">
+          <SidebarContent
+            active={active}
+            navigate={navigate}
+            onNavigate={() => setDrawer(false)}
+          />
+        </div>
+      </div>
+
+      {/* ── Main layout ── */}
+      <div className="max-w-7xl mx-auto flex">
+        {/* ── Desktop sidebar — hidden on mobile ── */}
+        <aside className="hidden lg:block w-60 shrink-0 sticky top-[112px] self-start border-r border-slate-800/50 py-8 pr-4 pl-6">
+          <SidebarContent active={active} navigate={navigate} />
         </aside>
 
         {/* ── Content ── */}
-        <main ref={contentRef} className="flex-1 px-10 py-10 max-w-3xl">
+        <main
+          ref={contentRef}
+          className="flex-1 px-4 sm:px-8 lg:px-10 py-8 lg:py-10 min-w-0"
+        >
           <ActiveSection />
 
-          {/* Prev / Next navigation */}
+          {/* Prev / Next */}
           <div className="flex items-center justify-between mt-12 pt-6 border-t border-slate-800/50">
             {(() => {
               const idx = sections.findIndex((s) => s.id === active);
@@ -853,7 +926,8 @@ export default function DocsPage() {
                       className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-200 transition-colors"
                     >
                       <ChevronRight size={14} className="rotate-180" />
-                      {prev.label}
+                      <span className="hidden sm:inline">{prev.label}</span>
+                      <span className="sm:hidden">Prev</span>
                     </button>
                   ) : (
                     <div />
@@ -863,7 +937,8 @@ export default function DocsPage() {
                       onClick={() => navigate(next.id)}
                       className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-200 transition-colors"
                     >
-                      {next.label}
+                      <span className="hidden sm:inline">{next.label}</span>
+                      <span className="sm:hidden">Next</span>
                       <ChevronRight size={14} />
                     </button>
                   ) : (
