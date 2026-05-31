@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createBrowserClient } from "@supabase/ssr";
-import EditComponentModal from "../components/EditComponentModal";
+import EditComponentModal from "@/app/components/EditComponentModal";
 const TYPE_ORDER = ["persona", "protocol", "format", "template", "taxonomy"];
 
 const TYPE_COLORS = {

@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, Plus, Loader2, X } from "lucide-react";
-import PackCard from "../components/PackCard";
-import CreatePackModal from "../components/CreatePackModal";
+import PackCard from "@/app/components/PackCard";
+import CreatePackModal from "@/app/components/CreatePackModal";
 
 const CATEGORIES = [
   "code-review",

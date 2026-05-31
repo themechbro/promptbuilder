@@ -161,7 +161,7 @@ export default function NavBar() {
         <nav className="flex items-center gap-1.5 md:gap-3">
           {/* Standard Tier */}
           <Link
-            href="/"
+            href="/standard"
             className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-slate-700"
           >
             <Scale className="w-4 h-4" />
