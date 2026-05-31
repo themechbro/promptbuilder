@@ -1,5 +1,5 @@
 export default function sitemap() {
-  const base = "https://promptbuilder-five.vercel.app/"; // update to your domain
+  const base = "https://promptbuilder-five.vercel.app"; // update to your domain
 
   const routes = [
     { url: "/", priority: 1.0, changeFrequency: "weekly" },
