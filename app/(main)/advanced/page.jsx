@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { supabase } from "@/utils/supabaseClient";
 import { compilePromptKitBlueprint } from "@/utils/promptCompiler";
-import CreateComponentModal from "../components/CreateComponentModal";
+import CreateComponentModal from "@/app/components/CreateComponentModal";
 import {
   Plus,
   Copy,
@@ -27,13 +27,12 @@ import {
   PackageOpen,
   Boxes,
 } from "lucide-react";
-import SelectComponentModal from "../components/SelectComponentModal";
+import SelectComponentModal from "@/app/components/SelectComponentModal";
 import localforage from "localforage";
 import ReactMarkdown from "react-markdown";
 import { useSearchParams } from "next/navigation";
-import ChainBuilder from "../components/ChainBuilder";
-import TourTooltip from "../components/TourTooltip";
-
+import TourTooltip from "@/app/components/TourTooltip";
+import ChainBuilder from "@/app/components/ChainBuilder";
 function PackLoader({ onLoad }) {
   const searchParams = useSearchParams();
 

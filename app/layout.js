@@ -1,9 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
-import Link from "next/link";
-import NavBar from "./components/NavBar";
-import Footer from "./components/footer";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -15,21 +13,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "PromptBuilder | Stateless Prompt Engineering & Multi-Model Sandbox",
+  title: "Prompt Builder — Build Prompts That Actually Work",
   description:
-    "An enterprise-grade, stateless prompt orchestration IDE designed to build, compile, and validate high-signal LLM frameworks with zero-cost serverless edge proxies.",
+    "A component-based prompt IDE with a public vault, semantic search, prompt chaining, and an MCP server for Claude Desktop and Cursor.",
   keywords: [
     "Prompt Engineering",
-    "LLM Telemetry",
+    "Prompt Builder",
+    "MCP Server",
+    "Claude Desktop",
+    "LLM Tools",
     "Next.js Developer Tools",
-    "Gemini 3.1 Flash",
-    "Serverless Proxy IDE",
   ],
   authors: [{ name: "themechbro" }],
   openGraph: {
-    title: "PromptBuilder | Stateless Prompt Engineering & Multi-Model Sandbox",
+    title: "Prompt Builder — Build Prompts That Actually Work",
     description:
-      "Stateless prompt compilation workspace showing explicit token optimization metrics across Gemini, OpenAI, and Anthropic runtimes.",
+      "A component-based prompt IDE with a public vault, semantic search, prompt chaining, and an MCP server for Claude Desktop and Cursor.",
     type: "website",
     url: "https://promptbuilder-five.vercel.app/",
     images: [
@@ -37,15 +36,15 @@ export const metadata = {
         url: "./icon.png",
         width: 1200,
         height: 630,
-        alt: "PromptBuilder Workspace Dashboard Preview",
+        alt: "Prompt Builder",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "PromptBuilder | Stateless Prompt Engineering & Multi-Model Sandbox",
+    title: "Prompt Builder — Build Prompts That Actually Work",
     description:
-      "Stateless prompt orchestration IDE tracking real-time API token weights.",
+      "Component-based prompt IDE with MCP server integration for Claude Desktop and Cursor.",
   },
   verification: {
     google: "JxFIKx0UgDLimx46iUYPsfjXgFmkaplSPF6t31Li8nw",
@@ -66,20 +65,15 @@ export default function RootLayout({ children }) {
         />
         <Script id="google-analytics-init" strategy="afterInteractive">
           {`
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', '${GA_ID}', {
-        page_path: window.location.pathname,
-      });
-    `}
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_ID}', {
+              page_path: window.location.pathname,
+            });
+          `}
         </Script>
-        {/* Shared Navigation Header */}
-        <NavBar />
-
-        {/* Page Content */}
-        <main className="flex-1 flex flex-col">{children}</main>
-        <Footer />
+        {children}
       </body>
     </html>
   );
