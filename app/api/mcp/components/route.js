@@ -49,11 +49,12 @@ export async function GET(request) {
         { status: 400 },
       );
     }
+    const slug = searchParams.get("slug");
 
     // Build filter — own components + all public ones
     let filter = `or=(created_by.eq.${auth.userId},is_public.eq.true)`;
     if (type) filter += `&type=eq.${type}`;
-
+    if (slug) filter += `&slug=eq.${slug}`;
     // Text search on name if q provided
     if (q) filter += `&name=ilike.*${encodeURIComponent(q)}*`;
 
