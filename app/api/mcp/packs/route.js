@@ -60,10 +60,12 @@ export async function GET(request) {
         { status: 400 },
       );
     }
+    const slug = searchParams.get("slug");
 
     // Public packs only for MCP — no private packs via API key
     let filter = `is_public=eq.true`;
     if (category) filter += `&category=eq.${category}`;
+    if (slug) filter += `&slug=eq.${slug}`;
     if (q) filter += `&name=ilike.*${encodeURIComponent(q)}*`;
 
     const response = await fetch(
