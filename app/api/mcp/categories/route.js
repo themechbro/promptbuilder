@@ -58,6 +58,12 @@ export const CATEGORIES = [
     label: "HR",
     description: "Performance reviews, hiring, and talent acquisition",
   },
+  {
+    id: "image-generation",
+    label: "Image Generation",
+    description:
+      "AI image prompt engineering for ChatGPT, Gemini, and other image generation platforms",
+  },
 ];
 
 // GET /api/mcp/categories

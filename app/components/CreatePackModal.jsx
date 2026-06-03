@@ -13,6 +13,7 @@ const CATEGORIES = [
   "data",
   "hr",
   "customer-support",
+  "image-generation",
 ];
 
 // Fetches components by type from existing API
