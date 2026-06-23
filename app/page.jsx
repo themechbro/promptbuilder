@@ -160,7 +160,7 @@ export default function LandingPage() {
       {/* ── Nav ── */}
       <nav className="land-nav">
         <Link href="/" className="logo">
-          <Image src={logo} className="logo-mk" />
+          <Image src={logo} className="logo-mk" alt="promptbuilder logo" />
           <span className="logo-nm">promptbuilder</span>
         </Link>
         <div className="nav-ls">
@@ -401,7 +401,7 @@ export default function LandingPage() {
       <div className="land-divider" />
       <footer className="land-footer">
         <div className="fl">
-          <Image src={logo} className="fm" />
+          <Image src={logo} className="fm" alt="promptbuilder logo" />
           <span className="fn">promptbuilder</span>
         </div>
         <div className="fr">Open source · MIT License</div>
