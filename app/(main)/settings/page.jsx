@@ -12,6 +12,171 @@ import {
   Clock,
   X,
 } from "lucide-react";
+
+const MCP_CLIENTS = [
+  { id: "claude-desktop", label: "Claude Desktop" },
+  { id: "cursor", label: "Cursor" },
+  { id: "windsurf", label: "Windsurf" },
+];
+
+const MCP_FILE_PATHS = {
+  "claude-desktop": {
+    macos: [
+      {
+        label: null,
+        path: "~/Library/Application Support/Claude/claude_desktop_config.json",
+      },
+    ],
+    windows: [
+      {
+        label: "Installed via .exe installer",
+        path: "%APPDATA%\\Claude\\claude_desktop_config.json",
+      },
+      {
+        label: "Installed via Microsoft Store / WinGet",
+        path: "%LOCALAPPDATA%\\Packages\\Claude_pzs8sxrjxfjjc\\LocalCache\\Roaming\\Claude\\claude_desktop_config.json",
+      },
+    ],
+  },
+  cursor: {
+    macos: [{ label: null, path: "~/.cursor/mcp.json" }],
+    windows: [{ label: null, path: "~/.cursor/mcp.json" }],
+  },
+  windsurf: {
+    macos: [{ label: null, path: "~/.codeium/windsurf/mcp_config.json" }],
+    windows: [{ label: null, path: "~/.codeium/windsurf/mcp_config.json" }],
+  },
+};
+
+function generateMcpConfig(rawKey, os) {
+  const isWindows = os === "windows";
+
+  return JSON.stringify(
+    {
+      mcpServers: {
+        promptbuilder: {
+          command: isWindows ? "promptbuilder-mcp" : "npx",
+          args: isWindows
+            ? ["--key", rawKey]
+            : ["-y", "promptbuilder-mcp", "--key", rawKey],
+        },
+      },
+    },
+    null,
+    2,
+  );
+}
+
+function McpConfigBlock({ rawKey }) {
+  const [selectedClient, setSelectedClient] = useState("claude-desktop");
+  const [selectedOS, setSelectedOS] = useState("macos");
+  const [copiedConfig, setCopiedConfig] = useState(false);
+
+  const config = generateMcpConfig(rawKey, selectedOS);
+  const filePaths = MCP_FILE_PATHS[selectedClient][selectedOS];
+
+  function handleCopyConfig() {
+    navigator.clipboard.writeText(config);
+    setCopiedConfig(true);
+    setTimeout(() => setCopiedConfig(false), 2000);
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-xs font-mono text-slate-400">
+        MCP Config — paste into your client
+      </p>
+
+      {/* Client selector */}
+      <div className="flex gap-2 flex-wrap">
+        {MCP_CLIENTS.map((c) => (
+          <button
+            key={c.id}
+            onClick={() => setSelectedClient(c.id)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors border ${
+              selectedClient === c.id
+                ? "bg-indigo-600 border-indigo-500 text-white"
+                : "bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      {/* OS selector */}
+      <div className="flex gap-2">
+        {["macos", "windows"].map((os) => (
+          <button
+            key={os}
+            onClick={() => setSelectedOS(os)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors border ${
+              selectedOS === os
+                ? "bg-slate-700 border-slate-500 text-slate-200"
+                : "bg-slate-800 border-slate-700 text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            {os === "macos" ? "macOS" : "Windows"}
+          </button>
+        ))}
+      </div>
+
+      {/* Windows install warning — shown BEFORE config, not after */}
+      {selectedOS === "windows" && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 flex items-start gap-2">
+          <AlertTriangle size={12} className="text-amber-400 mt-0.5 shrink-0" />
+          <p className="text-xs font-mono text-amber-300 leading-relaxed">
+            Run this in PowerShell first — npx is unreliable on Windows:
+            <br />
+            <code className="text-amber-200">
+              npm install -g promptbuilder-mcp
+            </code>
+          </p>
+        </div>
+      )}
+
+      {/* Config output */}
+      <div className="bg-slate-950 border border-slate-800 rounded-lg p-4 relative">
+        <pre className="text-xs text-emerald-300 font-mono whitespace-pre-wrap break-all leading-relaxed">
+          {config}
+        </pre>
+        <button
+          onClick={handleCopyConfig}
+          className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-mono text-slate-300 transition-colors"
+        >
+          {copiedConfig ? (
+            <Check size={11} className="text-emerald-400" />
+          ) : (
+            <Copy size={11} />
+          )}
+          {copiedConfig ? "Copied" : "Copy"}
+        </button>
+      </div>
+
+      {/* File path(s) — Claude Desktop on Windows has two possible paths */}
+      <div className="flex flex-col gap-2">
+        {filePaths.map((fp, i) => (
+          <div key={i} className="flex flex-col gap-1 min-w-0">
+            {fp.label && (
+              <span className="text-xs font-mono text-slate-500">
+                {fp.label}:
+              </span>
+            )}
+            <code className="text-xs font-mono text-slate-400 break-all leading-relaxed bg-slate-900 px-2 py-1.5 rounded block w-full min-w-0">
+              {fp.path}
+            </code>
+          </div>
+        ))}
+        {filePaths.length > 1 && (
+          <p className="text-xs text-slate-600 italic">
+            Not sure which? Only one of these will exist on your system.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false);
 
@@ -20,7 +185,6 @@ function CopyButton({ text }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
   return (
     <button
       onClick={handleCopy}
@@ -41,6 +205,7 @@ function NewKeyModal({ onClose, onCreated }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [rawKey, setRawKey] = useState(null);
+  const [showConfig, setShowConfig] = useState(false);
 
   const handleGenerate = async () => {
     if (!name.trim()) return;
@@ -74,12 +239,14 @@ function NewKeyModal({ onClose, onCreated }) {
   if (rawKey) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg mx-4 p-6 flex flex-col gap-4">
+        <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-xl mx-4 p-6 flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
+          {/* Header */}
           <div className="flex items-center gap-2 text-emerald-400">
             <ShieldCheck size={16} />
             <h2 className="text-sm font-semibold font-mono">Key Generated</h2>
           </div>
 
+          {/* Warning */}
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3 flex items-start gap-2">
             <AlertTriangle
               size={14}
@@ -91,6 +258,7 @@ function NewKeyModal({ onClose, onCreated }) {
             </p>
           </div>
 
+          {/* Raw key */}
           <div className="bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
             <code className="text-xs text-indigo-300 font-mono break-all">
               {rawKey}
@@ -98,6 +266,20 @@ function NewKeyModal({ onClose, onCreated }) {
             <CopyButton text={rawKey} />
           </div>
 
+          {/* Divider */}
+          <div className="border-t border-slate-800" />
+
+          {/* MCP Config — collapsed by default to keep key reveal focused */}
+          <button
+            onClick={() => setShowConfig(!showConfig)}
+            className="text-xs font-mono text-indigo-400 hover:text-indigo-300 text-left"
+          >
+            {showConfig ? "− Hide" : "+ Show"} MCP config for this key
+          </button>
+
+          {showConfig && <McpConfigBlock rawKey={rawKey} />}
+
+          {/* Close */}
           <button
             onClick={onClose}
             className="w-full px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-sm font-medium transition-colors"
@@ -251,6 +433,44 @@ function KeyRow({ apiKey, onRevoke }) {
   );
 }
 
+function McpConfigGenerator() {
+  const [pastedKey, setPastedKey] = useState("");
+
+  const isValidKey = pastedKey.startsWith("pb_") && pastedKey.length > 10;
+
+  return (
+    <div className="mt-10 border-t border-slate-800 pt-8 flex flex-col gap-5">
+      <div>
+        <h2 className="text-sm font-semibold font-mono text-slate-200">
+          Connect to MCP Client
+        </h2>
+        <p className="text-xs text-slate-500 mt-1">
+          Generate a config for Claude Desktop, Cursor, or Windsurf.
+        </p>
+      </div>
+
+      {/* Key input */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-mono text-slate-400">API Key</label>
+        <input
+          type="password"
+          placeholder="Paste your API key (pb_...)"
+          value={pastedKey}
+          onChange={(e) => setPastedKey(e.target.value)}
+          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+        />
+        <p className="text-xs text-slate-600">
+          Key is never sent anywhere — config is generated locally in your
+          browser.
+        </p>
+      </div>
+
+      {/* Config block — only when key is valid */}
+      {isValidKey && <McpConfigBlock rawKey={pastedKey} />}
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const [keys, setKeys] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -350,6 +570,9 @@ export default function SettingsPage() {
             one.
           </p>
         )}
+
+        {/* MCP Config Generator — returning users */}
+        <McpConfigGenerator />
       </div>
 
       {showModal && (
