@@ -11,6 +11,17 @@ export const metadata = {
     title: "Community Vault | Prompt Builder",
     description: "Public library of prompt components, packs, and templates.",
     url: "https://promptbuilder-five.vercel.app/community",
+    siteName: "Prompt Builder",
+    type: "website",
+    locale: "en_US",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Prompt Builder — Component-Based Prompt IDE",
+      },
+    ],
   },
 };
 

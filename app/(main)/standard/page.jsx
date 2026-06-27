@@ -12,6 +12,17 @@ export const metadata = {
     description:
       "Free, no-login prompt runner for OpenAI, Anthropic, and Gemini.",
     url: "https://promptbuilder-five.vercel.app/standard",
+    siteName: "Prompt Builder",
+    type: "website",
+    locale: "en_US",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Prompt Builder — Component-Based Prompt IDE",
+      },
+    ],
   },
 };
 

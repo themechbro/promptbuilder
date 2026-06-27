@@ -12,6 +12,17 @@ export const metadata = {
     description:
       "Component vault, prompt chaining, and multi-provider execution in one IDE.",
     url: "https://promptbuilder-five.vercel.app/advanced",
+    siteName: "Prompt Builder",
+    type: "website",
+    locale: "en_US",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Prompt Builder — Component-Based Prompt IDE",
+      },
+    ],
   },
 };
 
