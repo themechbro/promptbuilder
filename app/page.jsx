@@ -1,34 +1,24 @@
-import Link from "next/link";
-import "./landing.css";
-import logo from "@/public/logo/icon.png";
 import Image from "next/image";
+import Link from "next/link";
+import logo from "@/public/logo/icon.png";
 import JsonLd from "./components/JsonLd";
+import { buildMetadata, defaultTitle } from "./lib/seo";
+import "./landing.css";
 
-export const metadata = {
-  title: "Prompt Builder — Build Prompts That Actually Work",
+export const metadata = buildMetadata({
+  title: { absolute: defaultTitle },
   description:
-    "A free, open-source component-based prompt IDE. Build reusable prompt components, chain multi-step workflows, and connect your vault to Claude Desktop via MCP.",
-  alternates: {
-    canonical: "https://promptbuilder-five.vercel.app/",
-  },
-  openGraph: {
-    title: "Prompt Builder — Build Prompts That Actually Work",
-    description:
-      "Free prompt engineering IDE with vault, chaining, and MCP server support.",
-    url: "https://promptbuilder-five.vercel.app/",
-    siteName: "Prompt Builder",
-    type: "website",
-    locale: "en_US",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Prompt Builder — Component-Based Prompt IDE",
-      },
-    ],
-  },
-};
+    "Build reusable prompt components, chain multi-step AI workflows, explore community packs, and connect your vault to Claude Desktop via MCP.",
+  path: "/",
+  socialTitle: defaultTitle,
+  keywords: [
+    "Prompt Builder",
+    "AI prompt IDE",
+    "prompt chaining",
+    "MCP server",
+    "Adrin T Paul",
+  ],
+});
 
 const mcpConfigHtml = `<span style="color:#3A3A5A">{</span><br>
 &nbsp;&nbsp;<span style="color:#9B8AFF">"mcpServers"</span><span style="color:#3A3A5A">: {</span><br>
@@ -51,10 +41,9 @@ export default function LandingPage() {
       <JsonLd />
       <div className="grid-bg" />
 
-      {/* ── Nav ── */}
       <nav className="land-nav">
         <Link href="/" className="logo">
-          <Image src={logo} className="logo-mk" alt="promptbuilder logo" />
+          <Image src={logo} className="logo-mk" alt="Prompt Builder logo" />
           <span className="logo-nm">promptbuilder</span>
         </Link>
         <div className="nav-ls">
@@ -78,17 +67,16 @@ export default function LandingPage() {
             npm
           </a>
           <Link href="/advanced" className="nav-btn">
-            Open Studio →
+            Open Studio -{">"}
           </Link>
         </div>
       </nav>
 
-      {/* ── Hero ── */}
       <div className="hero">
         <div className="hero-glow" />
         <div className="badge">
           <span className="bdot" />
-          v2.5.0 · MCP Server Live
+          v2.5.0 | MCP Server Live
         </div>
         <h1>
           Build prompts
@@ -146,7 +134,6 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* ── Features ── */}
       <section className="sec">
         <div className="sl2">Features</div>
         <h2 className="st2">
@@ -159,7 +146,7 @@ export default function LandingPage() {
         </p>
         <div className="fg">
           <div className="fc">
-            <div className="fi fig">🗄️</div>
+            <div className="fi fig">Vault</div>
             <div className="ft">Component Vault</div>
             <p className="fd">
               45 public personas, protocols, formats, and templates across 5
@@ -168,7 +155,7 @@ export default function LandingPage() {
             <div className="fch chg">45 components</div>
           </div>
           <div className="fc">
-            <div className="fi fit">🔌</div>
+            <div className="fi fit">MCP</div>
             <div className="ft">MCP Integration</div>
             <p className="fd">
               Install <code>promptbuilder-mcp</code> and your vault becomes
@@ -177,7 +164,7 @@ export default function LandingPage() {
             <div className="fch cht">npx ready</div>
           </div>
           <div className="fc">
-            <div className="fi fip">⛓️</div>
+            <div className="fi fip">Chain</div>
             <div className="ft">Prompt Chaining</div>
             <p className="fd">
               Chain prompts with <code>{"{{previous_output}}"}</code> injection.
@@ -188,7 +175,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── MCP Section ── */}
       <div className="mcp-w">
         <div className="mcp-b">
           <div className="ml">
@@ -200,7 +186,7 @@ export default function LandingPage() {
             </div>
             <p className="md">
               Connect once with your API key. Every component and pack becomes a
-              callable tool — in Claude Desktop, Cursor, or any MCP client.
+              callable tool in Claude Desktop, Cursor, or any MCP client.
             </p>
             <div className="mcc">
               <span className="cc">Claude Desktop</span>
@@ -228,7 +214,6 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* ── How it works ── */}
       <section className="sec">
         <div className="sl2">How it works</div>
         <h2 className="st2">Three steps to a better prompt.</h2>
@@ -241,7 +226,7 @@ export default function LandingPage() {
             <div className="stt">Pick Components</div>
             <p className="sd">
               Browse the vault or search semantically. Add a persona, protocol,
-              format — whatever the task needs.
+              format, whatever the task needs.
             </p>
           </div>
           <div className="stp">
@@ -263,7 +248,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA ── */}
       <div className="cta-s">
         <div className="cta-g" />
         <h2 className="cta-h">
@@ -276,7 +260,7 @@ export default function LandingPage() {
         </p>
         <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
           <Link href="/advanced" className="bp">
-            Open Studio →
+            Open Studio -{">"}
           </Link>
           <a
             href="https://www.npmjs.com/package/promptbuilder-mcp"
@@ -295,10 +279,12 @@ export default function LandingPage() {
       <div className="land-divider" />
       <footer className="land-footer">
         <div className="fl">
-          <Image src={logo} className="fm" alt="promptbuilder logo" />
+          <Image src={logo} className="fm" alt="Prompt Builder logo" />
           <span className="fn">promptbuilder</span>
         </div>
-        <div className="fr">Open source · MIT License</div>
+        <div className="fr">
+          Open source | MIT License | Built by Adrin T Paul
+        </div>
       </footer>
     </div>
   );

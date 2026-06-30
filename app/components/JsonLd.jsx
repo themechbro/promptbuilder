@@ -1,17 +1,48 @@
-// app/components/JsonLd.jsx
-// Drop this into app/page.jsx (landing page) inside the root div
+import {
+  absoluteUrl,
+  creatorAlias,
+  creatorGithub,
+  creatorLinkedIn,
+  creatorName,
+  creatorUrl,
+  defaultDescription,
+  repositoryUrl,
+  siteName,
+  siteShortName,
+} from "../lib/seo";
 
 export default function JsonLd() {
+  const rootUrl = absoluteUrl("/");
+
   const schema = {
     "@context": "https://schema.org",
     "@graph": [
       {
-        // Software application schema — tells Google this is a tool
+        "@type": "Person",
+        "@id": `${rootUrl}#creator`,
+        name: creatorName,
+        alternateName: creatorAlias,
+        url: creatorUrl,
+        sameAs: [creatorUrl, creatorGithub, creatorLinkedIn],
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${rootUrl}#website`,
+        name: siteName,
+        alternateName: siteShortName,
+        url: rootUrl,
+        description: defaultDescription,
+        publisher: {
+          "@id": `${rootUrl}#creator`,
+        },
+        inLanguage: "en-US",
+      },
+      {
         "@type": "SoftwareApplication",
-        name: "Prompt Builder",
-        url: "https://promptbuilder-five.vercel.app/",
-        description:
-          "A component-based prompt IDE with a public vault, semantic search, prompt chaining, and an MCP server for Claude Desktop and Cursor.",
+        "@id": `${rootUrl}#app`,
+        name: siteName,
+        url: rootUrl,
+        description: defaultDescription,
         applicationCategory: "DeveloperApplication",
         operatingSystem: "Web",
         offers: {
@@ -19,12 +50,10 @@ export default function JsonLd() {
           price: "0",
           priceCurrency: "USD",
         },
-        author: {
-          "@type": "Person",
-          name: "themechbro",
-          url: "https://adrin-t-paul.vercel.app",
+        creator: {
+          "@id": `${rootUrl}#creator`,
         },
-        codeRepository: "https://github.com/themechbro/promptbuilder",
+        codeRepository: repositoryUrl,
         license: "https://opensource.org/licenses/MIT",
         keywords: [
           "prompt engineering",
@@ -35,18 +64,6 @@ export default function JsonLd() {
           "prompt chaining",
           "LLM tools",
         ],
-      },
-      {
-        // Website schema — tells Google the site structure
-        "@type": "WebSite",
-        name: "Prompt Builder",
-        url: "https://promptbuilder-five.vercel.app/",
-        description: "Free, open-source prompt engineering IDE.",
-        potentialAction: {
-          "@type": "SearchAction",
-          target: "https://promptbuilder-five.vercel.app/docs",
-          "query-input": "required name=search_term_string",
-        },
       },
     ],
   };

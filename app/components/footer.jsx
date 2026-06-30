@@ -1,20 +1,15 @@
-import { Github, Linkedin, ExternalLink } from "lucide-react";
 export default function Footer() {
   return (
     <footer className="border-t border-slate-800 bg-slate-900/50 backdrop-blur px-6 py-4">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-        {/* Left: Branding */}
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
             Prompt Builder
           </span>
-          <span className="text-xs text-slate-600">·</span>
-          <span className="text-xs text-slate-500">
-            © 2026 Made with 🫰 themechbro
-          </span>
+          <span className="text-xs text-slate-600">|</span>
+          <span className="text-xs text-slate-500">© 2026 Built by Adrin T Paul</span>
         </div>
 
-        {/* Right: Links */}
         <div className="flex items-center gap-4">
           <a
             href="https://github.com/themechbro"
