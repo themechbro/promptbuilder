@@ -1,22 +1,14 @@
-// robots.js
-export default function robots() {
-  const base = "https://promptbuilder-five.vercel.app";
+import { absoluteUrl } from "./lib/seo";
 
+export default function robots() {
   return {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/docs", "/standard"],
-        disallow: [
-          "/auth/",
-          "/api/",
-          "/settings",
-          "/manage",
-          "/advanced",
-          "/community",
-        ],
+        allow: "/",
+        disallow: ["/auth/", "/api/", "/settings", "/manage"],
       },
     ],
-    sitemap: `${base}/sitemap.xml`,
+    sitemap: absoluteUrl("/sitemap.xml"),
   };
 }
